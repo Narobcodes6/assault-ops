@@ -1,96 +1,83 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
+/* FPS Military Tactical Design System - COD Inspired */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Core backgrounds - dark military theme */
+    --background: 220 15% 8%;
+    --foreground: 40 10% 92%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    /* Cards and surfaces */
+    --card: 220 12% 12%;
+    --card-foreground: 40 10% 92%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 220 12% 10%;
+    --popover-foreground: 40 10% 92%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary - COD signature orange */
+    --primary: 28 95% 55%;
+    --primary-foreground: 220 15% 8%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary - gunmetal gray */
+    --secondary: 220 10% 20%;
+    --secondary-foreground: 40 10% 85%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Muted - tactical gray */
+    --muted: 220 8% 18%;
+    --muted-foreground: 220 8% 55%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Accent - olive military */
+    --accent: 80 25% 25%;
+    --accent-foreground: 40 10% 92%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Danger/health */
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Borders and inputs */
+    --border: 220 10% 22%;
+    --input: 220 10% 18%;
+    --ring: 28 95% 55%;
 
-    --radius: 0.5rem;
+    --radius: 0.25rem;
 
-    --sidebar-background: 0 0% 98%;
+    /* Custom FPS tokens */
+    --military-green: 80 30% 20%;
+    --military-olive: 75 20% 30%;
+    --gunmetal: 220 8% 25%;
+    --ammo-gold: 45 90% 55%;
+    --health-red: 0 80% 45%;
+    --health-green: 120 60% 40%;
+    --scope-overlay: 0 0% 0%;
+    --crosshair: 0 0% 100%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    /* Gradients */
+    --gradient-military: linear-gradient(135deg, hsl(220 15% 8%) 0%, hsl(220 12% 15%) 50%, hsl(80 20% 12%) 100%);
+    --gradient-orange-glow: linear-gradient(180deg, hsl(28 95% 55%) 0%, hsl(20 90% 45%) 100%);
+    --gradient-dark-vignette: radial-gradient(ellipse at center, transparent 0%, hsl(220 15% 8% / 0.8) 100%);
 
-    --sidebar-primary: 240 5.9% 10%;
+    /* Shadows */
+    --shadow-tactical: 0 4px 20px -4px hsl(0 0% 0% / 0.5);
+    --shadow-orange-glow: 0 0 30px hsl(28 95% 55% / 0.4);
 
-    --sidebar-primary-foreground: 0 0% 98%;
+    /* Typography */
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-tactical: 'Rajdhani', sans-serif;
 
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Sidebar kept for compatibility */
+    --sidebar-background: 220 15% 10%;
+    --sidebar-foreground: 40 10% 85%;
+    --sidebar-primary: 28 95% 55%;
+    --sidebar-primary-foreground: 220 15% 8%;
+    --sidebar-accent: 80 25% 25%;
+    --sidebar-accent-foreground: 40 10% 92%;
+    --sidebar-border: 220 10% 22%;
+    --sidebar-ring: 28 95% 55%;
   }
 }
 
@@ -101,5 +88,102 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-tactical);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    letter-spacing: 0.05em;
+  }
+}
+
+@layer components {
+  .fps-button {
+    @apply relative overflow-hidden font-bold uppercase tracking-widest transition-all duration-300;
+    font-family: var(--font-display);
+    background: var(--gradient-orange-glow);
+    box-shadow: var(--shadow-orange-glow);
+  }
+
+  .fps-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 50px hsl(28 95% 55% / 0.6);
+  }
+
+  .fps-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, hsl(0 0% 100% / 0.2), transparent);
+    transition: left 0.5s;
+  }
+
+  .fps-button:hover::before {
+    left: 100%;
+  }
+
+  .military-text {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .tactical-border {
+    border: 1px solid hsl(var(--border));
+    position: relative;
+  }
+
+  .tactical-border::before,
+  .tactical-border::after {
+    content: '';
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    border: 2px solid hsl(var(--primary));
+  }
+
+  .tactical-border::before {
+    top: -2px;
+    left: -2px;
+    border-right: none;
+    border-bottom: none;
+  }
+
+  .tactical-border::after {
+    bottom: -2px;
+    right: -2px;
+    border-left: none;
+    border-top: none;
+  }
+
+  .hud-element {
+    @apply backdrop-blur-sm;
+    background: hsl(220 15% 8% / 0.7);
+    border: 1px solid hsl(var(--primary) / 0.3);
+  }
+
+  .loading-pulse {
+    animation: loadingPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes loadingPulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+
+  .soldier-glow {
+    filter: drop-shadow(0 0 20px hsl(28 95% 55% / 0.3));
+  }
+
+  .scan-line {
+    animation: scanLine 3s linear infinite;
+  }
+
+  @keyframes scanLine {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100vh); }
   }
 }
