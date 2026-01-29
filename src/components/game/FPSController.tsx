@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { PointerLockControls } from '@react-three/drei';
 import * as THREE from 'three';
@@ -27,10 +27,10 @@ const FPSController = ({
   const moveBackward = useRef(false);
   const moveLeft = useRef(false);
   const moveRight = useRef(false);
-  const canShoot = useRef(true);
   const lastShootTime = useRef(0);
+  const [isMoving, setIsMoving] = useState(false);
 
-  const shootRate = 100; // ms between shots
+  const shootRate = 120; // ms between shots (slightly slower for feel)
 
   const handleShoot = useCallback(() => {
     const now = Date.now();
@@ -113,26 +113,37 @@ const FPSController = ({
   useFrame((_, delta) => {
     if (!controlsRef.current?.isLocked) return;
 
-    // Movement speed
-    const speed = isScoped ? 3 : 8;
-    const friction = 10;
+    // Movement speed - slower and more tactical
+    const baseSpeed = isScoped ? 2.5 : 5;
+    const friction = 6; // Lower friction = more momentum/slide
 
-    velocity.current.x -= velocity.current.x * friction * delta;
-    velocity.current.z -= velocity.current.z * friction * delta;
+    // Smooth velocity decay
+    velocity.current.x *= (1 - friction * delta);
+    velocity.current.z *= (1 - friction * delta);
 
     direction.current.z = Number(moveForward.current) - Number(moveBackward.current);
     direction.current.x = Number(moveRight.current) - Number(moveLeft.current);
     direction.current.normalize();
 
+    const isCurrentlyMoving = moveForward.current || moveBackward.current || moveLeft.current || moveRight.current;
+    setIsMoving(isCurrentlyMoving);
+
+    // Acceleration-based movement for smoother feel
+    const acceleration = 25;
     if (moveForward.current || moveBackward.current) {
-      velocity.current.z -= direction.current.z * speed * delta * 50;
+      velocity.current.z -= direction.current.z * acceleration * delta;
     }
     if (moveLeft.current || moveRight.current) {
-      velocity.current.x -= direction.current.x * speed * delta * 50;
+      velocity.current.x -= direction.current.x * acceleration * delta;
     }
 
-    controlsRef.current.moveRight(-velocity.current.x * delta);
-    controlsRef.current.moveForward(-velocity.current.z * delta);
+    // Clamp max velocity
+    const maxVel = baseSpeed * 0.15;
+    velocity.current.x = Math.max(-maxVel, Math.min(maxVel, velocity.current.x));
+    velocity.current.z = Math.max(-maxVel, Math.min(maxVel, velocity.current.z));
+
+    controlsRef.current.moveRight(-velocity.current.x);
+    controlsRef.current.moveForward(-velocity.current.z);
 
     // Keep camera at player height
     camera.position.y = 1.7;
@@ -141,9 +152,10 @@ const FPSController = ({
     camera.position.x = Math.max(-35, Math.min(35, camera.position.x));
     camera.position.z = Math.max(-35, Math.min(35, camera.position.z));
 
-    // Adjust FOV for scope
-    const targetFov = isScoped ? 30 : 75;
-    (camera as THREE.PerspectiveCamera).fov += (targetFov - (camera as THREE.PerspectiveCamera).fov) * delta * 10;
+    // Smooth FOV transition for scope
+    const targetFov = isScoped ? 25 : 75;
+    const currentFov = (camera as THREE.PerspectiveCamera).fov;
+    (camera as THREE.PerspectiveCamera).fov = currentFov + (targetFov - currentFov) * delta * 8;
     (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
   });
 
@@ -153,7 +165,7 @@ const FPSController = ({
       
       {/* Weapon attached to camera */}
       <group>
-        <Weapon isScoped={isScoped} isShooting={isShooting} />
+        <Weapon isScoped={isScoped} isShooting={isShooting} isMoving={isMoving} />
       </group>
     </>
   );

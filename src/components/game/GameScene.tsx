@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef, useMemo, Suspense } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { useState, useCallback, useRef, useMemo, Suspense, useEffect } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
 import { Sky } from '@react-three/drei';
 import * as THREE from 'three';
 import Map from './Map';
@@ -7,38 +7,18 @@ import FPSController from './FPSController';
 import Bot from './Bot';
 import GameHUD from './GameHUD';
 
-// Muzzle flash component
-const MuzzleFlash = ({ position, active }: { position: THREE.Vector3; active: boolean }) => {
-  if (!active) return null;
-  
-  return (
-    <pointLight
-      position={position}
-      color={0xffaa00}
-      intensity={50}
-      distance={10}
-      decay={2}
-    />
-  );
-};
-
-// Camera-attached weapon renderer
-const WeaponRenderer = ({ isScoped, isShooting }: { isScoped: boolean; isShooting: boolean }) => {
+// Player position tracker component
+const PlayerPositionTracker = ({ onPositionUpdate }: { onPositionUpdate: (pos: THREE.Vector3) => void }) => {
   const { camera } = useThree();
-  const groupRef = useRef<THREE.Group>(null);
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      onPositionUpdate(camera.position.clone());
+    }, 100);
+    return () => clearInterval(interval);
+  }, [camera, onPositionUpdate]);
 
-  useFrame(() => {
-    if (groupRef.current) {
-      groupRef.current.position.copy(camera.position);
-      groupRef.current.quaternion.copy(camera.quaternion);
-    }
-  });
-
-  return (
-    <group ref={groupRef}>
-      {/* Weapon is rendered in FPSController */}
-    </group>
-  );
+  return null;
 };
 
 interface GameSceneProps {
@@ -51,27 +31,41 @@ const GameScene = ({ onGameOver }: GameSceneProps) => {
   const [kills, setKills] = useState(0);
   const [isScoped, setIsScoped] = useState(false);
   const [isShooting, setIsShooting] = useState(false);
-  const [muzzleFlash, setMuzzleFlash] = useState(false);
+  const [playerPosition, setPlayerPosition] = useState(new THREE.Vector3(0, 1.7, 0));
+  const [damageFlash, setDamageFlash] = useState(false);
   const [bots, setBots] = useState([
-    { id: 1, position: [-10, 0, -10] as [number, number, number], alive: true },
-    { id: 2, position: [10, 0, -10] as [number, number, number], alive: true },
-    { id: 3, position: [-10, 0, 10] as [number, number, number], alive: true },
-    { id: 4, position: [10, 0, 10] as [number, number, number], alive: true },
-    { id: 5, position: [0, 0, -20] as [number, number, number], alive: true },
-    { id: 6, position: [0, 0, 20] as [number, number, number], alive: true },
-    { id: 7, position: [-20, 0, 0] as [number, number, number], alive: true },
-    { id: 8, position: [20, 0, 0] as [number, number, number], alive: true },
+    { id: 1, position: [-12, 0, -12] as [number, number, number], alive: true },
+    { id: 2, position: [12, 0, -12] as [number, number, number], alive: true },
+    { id: 3, position: [-12, 0, 12] as [number, number, number], alive: true },
+    { id: 4, position: [12, 0, 12] as [number, number, number], alive: true },
+    { id: 5, position: [0, 0, -22] as [number, number, number], alive: true },
+    { id: 6, position: [0, 0, 22] as [number, number, number], alive: true },
+    { id: 7, position: [-22, 0, 0] as [number, number, number], alive: true },
+    { id: 8, position: [22, 0, 0] as [number, number, number], alive: true },
+    { id: 9, position: [-18, 0, -18] as [number, number, number], alive: true },
+    { id: 10, position: [18, 0, 18] as [number, number, number], alive: true },
   ]);
 
   const raycaster = useMemo(() => new THREE.Raycaster(), []);
   const sceneRef = useRef<THREE.Scene | null>(null);
 
+  // Check for game over
+  useEffect(() => {
+    if (health <= 0) {
+      onGameOver(kills);
+    }
+  }, [health, kills, onGameOver]);
+
+  const handlePlayerDamage = useCallback((damage: number) => {
+    setHealth((prev) => Math.max(0, prev - damage));
+    setDamageFlash(true);
+    setTimeout(() => setDamageFlash(false), 150);
+  }, []);
+
   const handleShoot = useCallback((origin: THREE.Vector3, direction: THREE.Vector3) => {
     if (ammo <= 0) return;
     
     setAmmo((prev) => prev - 1);
-    setMuzzleFlash(true);
-    setTimeout(() => setMuzzleFlash(false), 50);
 
     // Raycast for hit detection
     raycaster.set(origin, direction);
@@ -102,22 +96,17 @@ const GameScene = ({ onGameOver }: GameSceneProps) => {
     setKills((prev) => prev + 1);
   }, []);
 
-  // Reload ammo
-  const handleReload = useCallback(() => {
-    setAmmo(30);
-  }, []);
-
   // Handle R key for reload
-  useState(() => {
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'KeyR') {
-        handleReload();
+        setAmmo(30);
       }
     };
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  });
+  }, []);
 
   return (
     <>
@@ -128,10 +117,10 @@ const GameScene = ({ onGameOver }: GameSceneProps) => {
         style={{ position: 'fixed', inset: 0 }}
       >
         {/* Lighting */}
-        <ambientLight intensity={0.3} />
+        <ambientLight intensity={0.25} />
         <directionalLight
-          position={[20, 30, 10]}
-          intensity={1}
+          position={[30, 40, 20]}
+          intensity={1.2}
           castShadow
           shadow-mapSize-width={2048}
           shadow-mapSize-height={2048}
@@ -141,20 +130,24 @@ const GameScene = ({ onGameOver }: GameSceneProps) => {
           shadow-camera-top={50}
           shadow-camera-bottom={-50}
         />
+        <hemisphereLight args={[0x8888aa, 0x444422, 0.4]} />
         
         {/* Sky */}
         <Sky 
           distance={450000} 
-          sunPosition={[100, 10, 100]} 
-          inclination={0.5}
+          sunPosition={[100, 20, 100]} 
+          inclination={0.49}
           azimuth={0.25}
-          rayleigh={0.5}
+          rayleigh={0.4}
         />
 
         {/* Fog for atmosphere */}
-        <fog attach="fog" args={['#1a1a1f', 30, 80]} />
+        <fog attach="fog" args={['#1a1a20', 25, 70]} />
 
         <Suspense fallback={null}>
+          {/* Track player position for bots */}
+          <PlayerPositionTracker onPositionUpdate={setPlayerPosition} />
+
           {/* Map / Environment */}
           <Map />
 
@@ -173,11 +166,24 @@ const GameScene = ({ onGameOver }: GameSceneProps) => {
               key={bot.id}
               position={bot.position}
               onHit={() => handleBotKill(bot.id)}
+              onShootPlayer={handlePlayerDamage}
               isActive={true}
+              playerPosition={playerPosition}
             />
           ))}
         </Suspense>
       </Canvas>
+
+      {/* Damage flash overlay */}
+      {damageFlash && (
+        <div 
+          className="fixed inset-0 pointer-events-none z-40"
+          style={{
+            background: 'radial-gradient(ellipse at center, transparent 30%, rgba(255, 0, 0, 0.4) 100%)',
+            animation: 'pulse 0.15s ease-out',
+          }}
+        />
+      )}
 
       {/* HUD Overlay */}
       <GameHUD
