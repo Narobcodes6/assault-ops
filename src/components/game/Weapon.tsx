@@ -71,15 +71,13 @@ const Weapon = ({ isScoped, isShooting }: WeaponProps) => {
       </mesh>
 
       {/* Barrel */}
-      <mesh material={materials.metal} position={[0, 0.01, -0.35]}>
+      <mesh material={materials.metal} position={[0, 0.01, -0.35]} rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.015, 0.018, 0.35, 8]} />
-        <primitive object={new THREE.Euler(Math.PI / 2, 0, 0)} attach="rotation" />
       </mesh>
 
       {/* Muzzle brake */}
-      <mesh material={materials.metal} position={[0, 0.01, -0.55]}>
+      <mesh material={materials.metal} position={[0, 0.01, -0.55]} rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.022, 0.02, 0.06, 8]} />
-        <primitive object={new THREE.Euler(Math.PI / 2, 0, 0)} attach="rotation" />
       </mesh>
 
       {/* Stock */}
@@ -103,21 +101,18 @@ const Weapon = ({ isScoped, isShooting }: WeaponProps) => {
       </mesh>
 
       {/* Scope body */}
-      <mesh material={materials.scope} position={[0, 0.1, -0.05]}>
+      <mesh material={materials.scope} position={[0, 0.1, -0.05]} rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.025, 0.025, 0.2, 12]} />
-        <primitive object={new THREE.Euler(Math.PI / 2, 0, 0)} attach="rotation" />
       </mesh>
 
       {/* Scope front lens */}
-      <mesh material={materials.lens} position={[0, 0.1, -0.16]}>
+      <mesh material={materials.lens} position={[0, 0.1, -0.16]} rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.023, 0.023, 0.01, 12]} />
-        <primitive object={new THREE.Euler(Math.PI / 2, 0, 0)} attach="rotation" />
       </mesh>
 
       {/* Scope rear lens */}
-      <mesh material={materials.lens} position={[0, 0.1, 0.06]}>
+      <mesh material={materials.lens} position={[0, 0.1, 0.06]} rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[0.02, 0.02, 0.01, 12]} />
-        <primitive object={new THREE.Euler(Math.PI / 2, 0, 0)} attach="rotation" />
       </mesh>
 
       {/* Foregrip */}
