@@ -22,7 +22,7 @@ const FPSController = ({
   const { camera } = useThree();
   const controlsRef = useRef<any>(null);
   const velocity = useRef(new THREE.Vector3());
-  const direction = useRef(new THREE.Vector3());
+  const targetVelocity = useRef(new THREE.Vector3());
   const moveForward = useRef(false);
   const moveBackward = useRef(false);
   const moveLeft = useRef(false);
@@ -30,7 +30,7 @@ const FPSController = ({
   const lastShootTime = useRef(0);
   const [isMoving, setIsMoving] = useState(false);
 
-  const shootRate = 120; // ms between shots (slightly slower for feel)
+  const shootRate = 150; // ms between shots
 
   const handleShoot = useCallback(() => {
     const now = Date.now();
@@ -99,7 +99,7 @@ const FPSController = ({
 
   // Continuous shooting while holding mouse button
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
+    let interval: ReturnType<typeof setInterval> | null = null;
     
     if (isShooting) {
       interval = setInterval(handleShoot, shootRate);
@@ -113,60 +113,65 @@ const FPSController = ({
   useFrame((_, delta) => {
     if (!controlsRef.current?.isLocked) return;
 
-    // Movement speed - slower and more tactical
-    const baseSpeed = isScoped ? 2.5 : 5;
-    const friction = 6; // Lower friction = more momentum/slide
+    // Much slower, human-like movement
+    const walkSpeed = isScoped ? 1.2 : 2.8; // Slower base speeds
+    const friction = 12; // High friction = less sliding
+    const acceleration = 8; // Lower acceleration = slower ramp up
 
-    // Smooth velocity decay
-    velocity.current.x *= (1 - friction * delta);
-    velocity.current.z *= (1 - friction * delta);
+    // Calculate target velocity based on input
+    const inputZ = Number(moveForward.current) - Number(moveBackward.current);
+    const inputX = Number(moveRight.current) - Number(moveLeft.current);
+    
+    // Normalize diagonal movement
+    const inputLength = Math.sqrt(inputX * inputX + inputZ * inputZ);
+    const normalizedX = inputLength > 0 ? inputX / inputLength : 0;
+    const normalizedZ = inputLength > 0 ? inputZ / inputLength : 0;
 
-    direction.current.z = Number(moveForward.current) - Number(moveBackward.current);
-    direction.current.x = Number(moveRight.current) - Number(moveLeft.current);
-    direction.current.normalize();
+    // Set target velocity
+    targetVelocity.current.x = normalizedX * walkSpeed * delta;
+    targetVelocity.current.z = normalizedZ * walkSpeed * delta;
 
     const isCurrentlyMoving = moveForward.current || moveBackward.current || moveLeft.current || moveRight.current;
     setIsMoving(isCurrentlyMoving);
 
-    // Acceleration-based movement for smoother feel
-    const acceleration = 25;
-    if (moveForward.current || moveBackward.current) {
-      velocity.current.z -= direction.current.z * acceleration * delta;
-    }
-    if (moveLeft.current || moveRight.current) {
-      velocity.current.x -= direction.current.x * acceleration * delta;
+    // Smoothly interpolate current velocity towards target (or zero if not moving)
+    if (isCurrentlyMoving) {
+      velocity.current.x += (targetVelocity.current.x - velocity.current.x) * acceleration * delta;
+      velocity.current.z += (targetVelocity.current.z - velocity.current.z) * acceleration * delta;
+    } else {
+      // Quick stop when not pressing keys - no sliding
+      velocity.current.x *= Math.max(0, 1 - friction * delta);
+      velocity.current.z *= Math.max(0, 1 - friction * delta);
+      
+      // Snap to zero when very slow
+      if (Math.abs(velocity.current.x) < 0.0001) velocity.current.x = 0;
+      if (Math.abs(velocity.current.z) < 0.0001) velocity.current.z = 0;
     }
 
-    // Clamp max velocity
-    const maxVel = baseSpeed * 0.15;
-    velocity.current.x = Math.max(-maxVel, Math.min(maxVel, velocity.current.x));
-    velocity.current.z = Math.max(-maxVel, Math.min(maxVel, velocity.current.z));
-
+    // Apply movement
     controlsRef.current.moveRight(-velocity.current.x);
     controlsRef.current.moveForward(-velocity.current.z);
 
-    // Keep camera at player height
-    camera.position.y = 1.7;
+    // Keep camera at player height with subtle head bob
+    const bobAmount = isCurrentlyMoving ? Math.sin(Date.now() * 0.008) * 0.015 : 0;
+    camera.position.y = 1.7 + bobAmount;
 
-    // Clamp position to map bounds
-    camera.position.x = Math.max(-35, Math.min(35, camera.position.x));
-    camera.position.z = Math.max(-35, Math.min(35, camera.position.z));
+    // Clamp position to larger map bounds
+    camera.position.x = Math.max(-55, Math.min(55, camera.position.x));
+    camera.position.z = Math.max(-55, Math.min(55, camera.position.z));
 
     // Smooth FOV transition for scope
-    const targetFov = isScoped ? 25 : 75;
+    const targetFov = isScoped ? 30 : 75;
     const currentFov = (camera as THREE.PerspectiveCamera).fov;
-    (camera as THREE.PerspectiveCamera).fov = currentFov + (targetFov - currentFov) * delta * 8;
+    (camera as THREE.PerspectiveCamera).fov = currentFov + (targetFov - currentFov) * delta * 6;
     (camera as THREE.PerspectiveCamera).updateProjectionMatrix();
   });
 
   return (
     <>
       <PointerLockControls ref={controlsRef} />
-      
-      {/* Weapon attached to camera - rendered in camera space */}
-      <primitive object={camera}>
-        <Weapon isScoped={isScoped} isShooting={isShooting} isMoving={isMoving} />
-      </primitive>
+      {/* Weapon is rendered separately in the scene, following camera in its own useFrame */}
+      <Weapon isScoped={isScoped} isShooting={isShooting} isMoving={isMoving} />
     </>
   );
 };

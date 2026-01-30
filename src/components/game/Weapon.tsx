@@ -67,72 +67,85 @@ const Weapon = ({ isScoped, isShooting, isMoving }: WeaponProps) => {
 
     const time = state.clock.elapsedTime;
     
+    // First, position weapon relative to camera
+    const cameraPosition = camera.position.clone();
+    const cameraDirection = new THREE.Vector3();
+    camera.getWorldDirection(cameraDirection);
+    
+    // Get camera's right and up vectors
+    const cameraRight = new THREE.Vector3();
+    const cameraUp = new THREE.Vector3();
+    cameraRight.crossVectors(cameraDirection, camera.up).normalize();
+    cameraUp.crossVectors(cameraRight, cameraDirection).normalize();
+    
     // Smooth recoil with recovery
     if (isShooting) {
-      recoilRef.current = Math.min(recoilRef.current + delta * 8, 0.08);
+      recoilRef.current = Math.min(recoilRef.current + delta * 6, 0.06);
     } else {
-      recoilRef.current *= 0.92; // Smooth decay
+      recoilRef.current *= 0.9;
     }
 
-    // Walking bob animation
+    // Walking bob animation - slower
     if (isMoving && !isScoped) {
-      bobTimeRef.current += delta * 8;
+      bobTimeRef.current += delta * 6;
     } else {
-      bobTimeRef.current += delta * 0.5; // Subtle idle bob
+      bobTimeRef.current += delta * 0.4;
     }
 
-    const bobAmount = isMoving ? (isScoped ? 0.002 : 0.008) : 0.002;
+    const bobAmount = isMoving ? (isScoped ? 0.001 : 0.006) : 0.001;
     const bobX = Math.sin(bobTimeRef.current) * bobAmount;
-    const bobY = Math.abs(Math.cos(bobTimeRef.current * 2)) * bobAmount * 0.5;
+    const bobY = Math.abs(Math.cos(bobTimeRef.current * 2)) * bobAmount * 0.4;
 
     // Breathing sway (subtle)
-    breathRef.current += delta * 1.5;
-    const breathX = Math.sin(breathRef.current) * 0.001;
-    const breathY = Math.cos(breathRef.current * 0.7) * 0.0005;
+    breathRef.current += delta * 1.2;
+    const breathX = Math.sin(breathRef.current) * 0.0008;
+    const breathY = Math.cos(breathRef.current * 0.7) * 0.0004;
 
     // Mouse sway - weapon lags behind camera movement
     const currentRot = camera.rotation.clone();
-    const mouseVelX = (currentRot.y - lastMousePos.current.x) * 0.5;
-    const mouseVelY = (currentRot.x - lastMousePos.current.y) * 0.3;
+    const mouseVelX = (currentRot.y - lastMousePos.current.x) * 0.4;
+    const mouseVelY = (currentRot.x - lastMousePos.current.y) * 0.25;
     lastMousePos.current = { x: currentRot.y, y: currentRot.x };
 
     // Smooth sway interpolation
-    swayRef.current.x += (mouseVelX - swayRef.current.x) * delta * 5;
-    swayRef.current.y += (mouseVelY - swayRef.current.y) * delta * 5;
+    swayRef.current.x += (mouseVelX - swayRef.current.x) * delta * 4;
+    swayRef.current.y += (mouseVelY - swayRef.current.y) * delta * 4;
 
     // Clamp sway
-    swayRef.current.x = Math.max(-0.03, Math.min(0.03, swayRef.current.x));
-    swayRef.current.y = Math.max(-0.02, Math.min(0.02, swayRef.current.y));
+    swayRef.current.x = Math.max(-0.025, Math.min(0.025, swayRef.current.x));
+    swayRef.current.y = Math.max(-0.015, Math.min(0.015, swayRef.current.y));
 
-    // Target positions for ADS vs hip fire
-    const hipPos = { x: 0.32, y: -0.32, z: -0.45 };
-    const adsPos = { x: 0, y: -0.12, z: -0.25 };
+    // Offset positions for ADS vs hip fire
+    const hipOffset = { right: 0.28, down: 0.22, forward: 0.5 };
+    const adsOffset = { right: 0.0, down: 0.1, forward: 0.35 };
     
-    const targetPos = isScoped ? adsPos : hipPos;
-    const lerpSpeed = delta * 6; // Slower, smoother transition
+    const offset = isScoped ? adsOffset : hipOffset;
+    const lerpSpeed = delta * 5;
 
-    // Apply all animations
-    weaponRef.current.position.x += (targetPos.x + bobX + breathX + swayRef.current.x - weaponRef.current.position.x) * lerpSpeed;
-    weaponRef.current.position.y += (targetPos.y + bobY + breathY + swayRef.current.y - weaponRef.current.position.y) * lerpSpeed;
-    weaponRef.current.position.z += (targetPos.z - recoilRef.current - weaponRef.current.position.z) * lerpSpeed;
+    // Calculate final position in world space
+    const finalPos = cameraPosition.clone()
+      .add(cameraRight.clone().multiplyScalar(offset.right + bobX + breathX + swayRef.current.x))
+      .add(cameraUp.clone().multiplyScalar(-offset.down + bobY + breathY + swayRef.current.y))
+      .add(cameraDirection.clone().multiplyScalar(offset.forward - recoilRef.current));
 
-    // Weapon tilt based on movement sway
-    const targetRotX = swayRef.current.y * 0.5;
-    const targetRotY = -swayRef.current.x * 0.8;
-    const targetRotZ = swayRef.current.x * 0.3;
+    // Smoothly interpolate position
+    weaponRef.current.position.lerp(finalPos, lerpSpeed * 2);
 
-    weaponRef.current.rotation.x += (targetRotX - weaponRef.current.rotation.x) * lerpSpeed;
-    weaponRef.current.rotation.y += (targetRotY - weaponRef.current.rotation.y) * lerpSpeed;
-    weaponRef.current.rotation.z += (targetRotZ - weaponRef.current.rotation.z) * lerpSpeed;
+    // Match camera rotation with slight lag for sway effect
+    weaponRef.current.quaternion.slerp(camera.quaternion, lerpSpeed * 3);
+
+    // Add slight tilt based on sway
+    weaponRef.current.rotateZ(swayRef.current.x * 0.3);
+    weaponRef.current.rotateX(swayRef.current.y * 0.4);
 
     // Scale for ADS zoom effect
-    const targetScale = isScoped ? 0.6 : 1;
+    const targetScale = isScoped ? 0.55 : 1;
     const currentScale = weaponRef.current.scale.x;
     weaponRef.current.scale.setScalar(currentScale + (targetScale - currentScale) * lerpSpeed);
   });
 
   return (
-    <group ref={weaponRef} position={[0.32, -0.32, -0.45]}>
+    <group ref={weaponRef} position={[0, 0, 0]}>
       {/* Main receiver */}
       <mesh material={materials.metal} position={[0, 0, 0]}>
         <boxGeometry args={[0.055, 0.075, 0.38]} />

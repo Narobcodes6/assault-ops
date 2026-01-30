@@ -139,6 +139,108 @@ const createMetalTexture = (): THREE.CanvasTexture => {
   return texture;
 };
 
+// Dirt/gravel texture
+const createDirtTexture = (): THREE.CanvasTexture => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d')!;
+  
+  ctx.fillStyle = '#4a4038';
+  ctx.fillRect(0, 0, 64, 64);
+  
+  for (let i = 0; i < 800; i++) {
+    const x = Math.random() * 64;
+    const y = Math.random() * 64;
+    const shade = 50 + Math.random() * 40;
+    const size = 1 + Math.random() * 2;
+    ctx.fillStyle = `rgb(${shade + 10},${shade},${shade - 10})`;
+    ctx.fillRect(x, y, size, size);
+  }
+  
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(12, 12);
+  return texture;
+};
+
+// Grass texture
+const createGrassTexture = (): THREE.CanvasTexture => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d')!;
+  
+  ctx.fillStyle = '#2a3a2a';
+  ctx.fillRect(0, 0, 64, 64);
+  
+  for (let i = 0; i < 600; i++) {
+    const x = Math.random() * 64;
+    const y = Math.random() * 64;
+    const g = 40 + Math.random() * 30;
+    ctx.fillStyle = `rgb(${g * 0.6},${g},${g * 0.5})`;
+    ctx.fillRect(x, y, 1, 2 + Math.random() * 3);
+  }
+  
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(15, 15);
+  return texture;
+};
+
+// Wood texture
+const createWoodTexture = (): THREE.CanvasTexture => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d')!;
+  
+  ctx.fillStyle = '#5a4030';
+  ctx.fillRect(0, 0, 64, 64);
+  
+  for (let y = 0; y < 64; y++) {
+    const shade = 70 + Math.sin(y * 0.3) * 15 + Math.random() * 10;
+    ctx.fillStyle = `rgb(${shade},${shade * 0.7},${shade * 0.5})`;
+    ctx.fillRect(0, y, 64, 1);
+  }
+  
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(2, 2);
+  return texture;
+};
+
+// Tile floor texture
+const createTileTexture = (): THREE.CanvasTexture => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d')!;
+  
+  ctx.fillStyle = '#404040';
+  ctx.fillRect(0, 0, 64, 64);
+  
+  // Grid lines
+  ctx.strokeStyle = '#333333';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(32, 0); ctx.lineTo(32, 64);
+  ctx.moveTo(0, 32); ctx.lineTo(64, 32);
+  ctx.stroke();
+  
+  // Add noise
+  for (let i = 0; i < 200; i++) {
+    const shade = 55 + Math.random() * 20;
+    ctx.fillStyle = `rgb(${shade},${shade},${shade})`;
+    ctx.fillRect(Math.random() * 64, Math.random() * 64, 1, 1);
+  }
+  
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(8, 8);
+  return texture;
+};
+
 const Map = () => {
   // Create procedural textures
   const textures = useMemo(() => ({
@@ -146,6 +248,10 @@ const Map = () => {
     concrete: createConcreteTexture(),
     brick: createBrickTexture(),
     metal: createMetalTexture(),
+    dirt: createDirtTexture(),
+    grass: createGrassTexture(),
+    wood: createWoodTexture(),
+    tile: createTileTexture(),
     noise: createNoiseTexture(64, 0x3a3a3a, 0x2a2a2a),
   }), []);
 
@@ -212,9 +318,24 @@ const Map = () => {
       metalness: 0.1,
     }),
     interior: new THREE.MeshStandardMaterial({ 
-      color: 0x3a3a38,
-      roughness: 0.95,
+      map: textures.tile,
+      roughness: 0.9,
       metalness: 0.05,
+    }),
+    dirt: new THREE.MeshStandardMaterial({ 
+      map: textures.dirt,
+      roughness: 0.95,
+      metalness: 0.02,
+    }),
+    grass: new THREE.MeshStandardMaterial({ 
+      map: textures.grass,
+      roughness: 0.95,
+      metalness: 0.02,
+    }),
+    wood: new THREE.MeshStandardMaterial({ 
+      map: textures.wood,
+      roughness: 0.85,
+      metalness: 0.1,
     }),
   }), [textures]);
 
@@ -281,6 +402,37 @@ const Map = () => {
         <planeGeometry args={[120, 120]} />
         <primitive object={materials.ground} attach="material" />
       </mesh>
+
+      {/* Grass patches around map edges */}
+      {[
+        [-45, 0.01, -35], [45, 0.01, 35], [-35, 0.01, 45], [35, 0.01, -45],
+        [-50, 0.01, 20], [50, 0.01, -20], [-20, 0.01, 50], [20, 0.01, -50],
+      ].map((pos, i) => (
+        <mesh key={`grass-${i}`} rotation={[-Math.PI / 2, 0, Math.random() * Math.PI]} position={pos as [number, number, number]} receiveShadow>
+          <planeGeometry args={[12 + Math.random() * 6, 10 + Math.random() * 5]} />
+          <primitive object={materials.grass} attach="material" />
+        </mesh>
+      ))}
+
+      {/* Dirt patches */}
+      {[
+        [-25, 0.01, 25], [25, 0.01, -25], [-38, 0.01, -8], [38, 0.01, 8],
+      ].map((pos, i) => (
+        <mesh key={`dirt-${i}`} rotation={[-Math.PI / 2, 0, Math.random() * Math.PI]} position={pos as [number, number, number]} receiveShadow>
+          <planeGeometry args={[8 + Math.random() * 4, 6 + Math.random() * 3]} />
+          <primitive object={materials.dirt} attach="material" />
+        </mesh>
+      ))}
+
+      {/* Wooden crates scattered around */}
+      {[
+        [-22, 0.5, 12], [22, 0.5, -12], [-8, 0.35, -22], [15, 0.4, 28],
+      ].map((pos, i) => (
+        <mesh key={`crate-${i}`} position={pos as [number, number, number]} rotation={[0, Math.random() * 0.5, 0]} castShadow>
+          <boxGeometry args={[0.8 + Math.random() * 0.4, 0.7 + Math.random() * 0.3, 0.8 + Math.random() * 0.4]} />
+          <primitive object={materials.wood} attach="material" />
+        </mesh>
+      ))}
 
       {/* SPAWN BUILDING - Player spawns inside this */}
       <group position={[0, 0, 5]}>

@@ -71,6 +71,7 @@ const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotPr
   const [health, setHealth] = useState(100);
   const [isDead, setIsDead] = useState(false);
   const [isAiming, setIsAiming] = useState(false);
+  const isAimingRef = useRef(false);
   const targetPosition = useRef(new THREE.Vector3(...position));
   const moveTimer = useRef(0);
   const shootTimer = useRef(0);
@@ -188,7 +189,7 @@ const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotPr
     const tooClose = distanceToPlayer < 10;
     const optimalRange = distanceToPlayer > 15 && distanceToPlayer < 30;
 
-    // Look at player when in range
+    // Look at player when in range - use ref to avoid re-renders
     if (inCombatRange) {
       const lookTarget = playerPosition.clone();
       lookTarget.y = botPos.y;
@@ -201,10 +202,17 @@ const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotPr
       while (rotDiff > Math.PI) rotDiff -= Math.PI * 2;
       while (rotDiff < -Math.PI) rotDiff += Math.PI * 2;
       
-      botRef.current.rotation.y += rotDiff * delta * 2.5;
-      setIsAiming(true);
+      botRef.current.rotation.y += rotDiff * delta * 2;
+      // Only update state if it changed - prevents excessive re-renders
+      if (!isAimingRef.current) {
+        isAimingRef.current = true;
+        setIsAiming(true);
+      }
     } else {
-      setIsAiming(false);
+      if (isAimingRef.current) {
+        isAimingRef.current = false;
+        setIsAiming(false);
+      }
     }
 
     // Movement behavior - slower
@@ -216,7 +224,7 @@ const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotPr
       targetPosition.current.copy(botPos).add(awayDir.multiplyScalar(6));
     } else if (!optimalRange && inCombatRange) {
       // Move towards optimal range
-      if (moveTimer.current > 2.5) {
+      if (moveTimer.current > 3) {
         moveTimer.current = 0;
         const toPlayer = playerPosition.clone().sub(botPos).normalize();
         const strafeDir = new THREE.Vector3(-toPlayer.z, 0, toPlayer.x);
@@ -225,7 +233,7 @@ const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotPr
       }
     } else if (!inCombatRange) {
       // Patrol when player not in range
-      if (moveTimer.current > 5) {
+      if (moveTimer.current > 6) {
         moveTimer.current = 0;
         targetPosition.current.set(
           position[0] + (Math.random() - 0.5) * 20,
@@ -237,7 +245,7 @@ const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotPr
 
     // Smooth movement - slower
     const moveDir = targetPosition.current.clone().sub(botPos);
-    const moveSpeed = inCombatRange ? 1.5 : 1;
+    const moveSpeed = inCombatRange ? 1.2 : 0.8;
     
     if (moveDir.length() > 0.5) {
       moveDir.normalize();
@@ -250,15 +258,15 @@ const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotPr
     botRef.current.position.y = position[1];
 
     // Subtle bob animation
-    const bobAmount = 0.02;
-    botRef.current.position.y = position[1] + Math.sin(time * 2) * bobAmount;
+    const bobAmount = 0.015;
+    botRef.current.position.y = position[1] + Math.sin(time * 1.5) * bobAmount;
 
-    // Shooting behavior - slower rate
-    if (inCombatRange && isAiming) {
+    // Shooting behavior - much slower rate
+    if (inCombatRange && isAimingRef.current) {
       shootTimer.current += delta;
       
-      // Shoot every 1.5-3 seconds (slower)
-      const shootInterval = 1.5 + Math.random() * 1.5;
+      // Shoot every 2-4 seconds (much slower)
+      const shootInterval = 2 + Math.random() * 2;
       if (shootTimer.current > shootInterval) {
         shootTimer.current = 0;
         shootAtPlayer();
