@@ -1,5 +1,5 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
+import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 
 interface BotProps {
@@ -10,6 +10,62 @@ interface BotProps {
   playerPosition: THREE.Vector3;
 }
 
+// Camo pattern texture generator
+const createCamoTexture = (): THREE.CanvasTexture => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 64;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d')!;
+  
+  // Base color
+  ctx.fillStyle = '#3a4a3a';
+  ctx.fillRect(0, 0, 64, 64);
+  
+  // Camo blobs
+  const colors = ['#2a3a2a', '#4a5a4a', '#3a3a2a', '#2a2a2a'];
+  for (let i = 0; i < 20; i++) {
+    ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+    ctx.beginPath();
+    ctx.ellipse(
+      Math.random() * 64, 
+      Math.random() * 64, 
+      5 + Math.random() * 15, 
+      3 + Math.random() * 10, 
+      Math.random() * Math.PI, 
+      0, 
+      Math.PI * 2
+    );
+    ctx.fill();
+  }
+  
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  return texture;
+};
+
+const createFabricTexture = (): THREE.CanvasTexture => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 32;
+  canvas.height = 32;
+  const ctx = canvas.getContext('2d')!;
+  
+  ctx.fillStyle = '#2a2a2a';
+  ctx.fillRect(0, 0, 32, 32);
+  
+  // Fabric weave pattern
+  for (let y = 0; y < 32; y += 2) {
+    for (let x = 0; x < 32; x += 2) {
+      const shade = 35 + Math.random() * 15;
+      ctx.fillStyle = `rgb(${shade},${shade},${shade})`;
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+  
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  return texture;
+};
+
 const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotProps) => {
   const botRef = useRef<THREE.Group>(null);
   const [health, setHealth] = useState(100);
@@ -18,8 +74,58 @@ const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotPr
   const targetPosition = useRef(new THREE.Vector3(...position));
   const moveTimer = useRef(0);
   const shootTimer = useRef(0);
-  const lastShootTime = useRef(0);
   const muzzleFlashRef = useRef<THREE.PointLight>(null);
+  const canShoot = useRef(true);
+
+  // Create textures and materials
+  const materials = useMemo(() => {
+    const camoTex = createCamoTexture();
+    const fabricTex = createFabricTexture();
+    
+    return {
+      camo: new THREE.MeshStandardMaterial({ 
+        map: camoTex,
+        roughness: 0.85,
+        metalness: 0.1,
+      }),
+      vest: new THREE.MeshStandardMaterial({ 
+        map: fabricTex,
+        color: 0x2a2a2a,
+        roughness: 0.9,
+        metalness: 0.2,
+      }),
+      helmet: new THREE.MeshStandardMaterial({ 
+        color: 0x3a4a3a,
+        roughness: 0.7,
+        metalness: 0.3,
+      }),
+      skin: new THREE.MeshStandardMaterial({ 
+        color: 0x8a7a6a,
+        roughness: 0.9,
+        metalness: 0.05,
+      }),
+      metal: new THREE.MeshStandardMaterial({ 
+        color: 0x1a1a1a,
+        roughness: 0.3,
+        metalness: 0.9,
+      }),
+      boots: new THREE.MeshStandardMaterial({ 
+        color: 0x1a1a1a,
+        roughness: 0.95,
+        metalness: 0.1,
+      }),
+      pouch: new THREE.MeshStandardMaterial({ 
+        color: 0x4a4a3a,
+        roughness: 0.9,
+        metalness: 0.1,
+      }),
+      goggles: new THREE.MeshStandardMaterial({ 
+        color: 0x111111,
+        roughness: 0.1,
+        metalness: 0.95,
+      }),
+    };
+  }, []);
 
   useEffect(() => {
     if (health <= 0 && !isDead) {
@@ -40,24 +146,28 @@ const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotPr
   }, [isDead]);
 
   const shootAtPlayer = useCallback(() => {
-    if (!botRef.current || isDead) return;
+    if (!botRef.current || isDead || !canShoot.current) return;
+    
+    // Throttle shooting to prevent freezing
+    canShoot.current = false;
+    setTimeout(() => { canShoot.current = true; }, 800);
     
     const botPos = botRef.current.position;
     const distance = botPos.distanceTo(playerPosition);
     
-    // Accuracy decreases with distance
-    const baseAccuracy = 0.4;
-    const distancePenalty = Math.min(distance * 0.02, 0.5);
+    // Accuracy decreases with distance - reduced hit chance
+    const baseAccuracy = 0.25;
+    const distancePenalty = Math.min(distance * 0.015, 0.4);
     const hitChance = baseAccuracy - distancePenalty;
     
     if (Math.random() < hitChance) {
-      const damage = Math.floor(5 + Math.random() * 10); // 5-15 damage
+      const damage = Math.floor(3 + Math.random() * 7); // 3-10 damage (reduced)
       onShootPlayer(damage);
     }
 
     // Muzzle flash
     if (muzzleFlashRef.current) {
-      muzzleFlashRef.current.intensity = 20;
+      muzzleFlashRef.current.intensity = 15;
       setTimeout(() => {
         if (muzzleFlashRef.current) {
           muzzleFlashRef.current.intensity = 0;
@@ -73,10 +183,10 @@ const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotPr
     const distanceToPlayer = botPos.distanceTo(playerPosition);
     const time = state.clock.elapsedTime;
 
-    // Bot AI states
-    const inCombatRange = distanceToPlayer < 30;
-    const tooClose = distanceToPlayer < 8;
-    const optimalRange = distanceToPlayer > 12 && distanceToPlayer < 20;
+    // Bot AI states - increased ranges for bigger map
+    const inCombatRange = distanceToPlayer < 40;
+    const tooClose = distanceToPlayer < 10;
+    const optimalRange = distanceToPlayer > 15 && distanceToPlayer < 30;
 
     // Look at player when in range
     if (inCombatRange) {
@@ -91,64 +201,64 @@ const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotPr
       while (rotDiff > Math.PI) rotDiff -= Math.PI * 2;
       while (rotDiff < -Math.PI) rotDiff += Math.PI * 2;
       
-      botRef.current.rotation.y += rotDiff * delta * 3;
+      botRef.current.rotation.y += rotDiff * delta * 2.5;
       setIsAiming(true);
     } else {
       setIsAiming(false);
     }
 
-    // Movement behavior
+    // Movement behavior - slower
     moveTimer.current += delta;
     
     if (tooClose) {
       // Back away from player
       const awayDir = botPos.clone().sub(playerPosition).normalize();
-      targetPosition.current.copy(botPos).add(awayDir.multiplyScalar(5));
+      targetPosition.current.copy(botPos).add(awayDir.multiplyScalar(6));
     } else if (!optimalRange && inCombatRange) {
       // Move towards optimal range
-      if (moveTimer.current > 2) {
+      if (moveTimer.current > 2.5) {
         moveTimer.current = 0;
         const toPlayer = playerPosition.clone().sub(botPos).normalize();
         const strafeDir = new THREE.Vector3(-toPlayer.z, 0, toPlayer.x);
-        const strafe = (Math.random() - 0.5) * 8;
-        targetPosition.current.copy(playerPosition).add(toPlayer.multiplyScalar(-15)).add(strafeDir.multiplyScalar(strafe));
+        const strafe = (Math.random() - 0.5) * 10;
+        targetPosition.current.copy(playerPosition).add(toPlayer.multiplyScalar(-20)).add(strafeDir.multiplyScalar(strafe));
       }
     } else if (!inCombatRange) {
       // Patrol when player not in range
-      if (moveTimer.current > 4) {
+      if (moveTimer.current > 5) {
         moveTimer.current = 0;
         targetPosition.current.set(
-          position[0] + (Math.random() - 0.5) * 15,
+          position[0] + (Math.random() - 0.5) * 20,
           position[1],
-          position[2] + (Math.random() - 0.5) * 15
+          position[2] + (Math.random() - 0.5) * 20
         );
       }
     }
 
-    // Smooth movement
+    // Smooth movement - slower
     const moveDir = targetPosition.current.clone().sub(botPos);
-    const moveSpeed = inCombatRange ? 2 : 1.5;
+    const moveSpeed = inCombatRange ? 1.5 : 1;
     
     if (moveDir.length() > 0.5) {
       moveDir.normalize();
       botRef.current.position.add(moveDir.multiplyScalar(delta * moveSpeed));
     }
 
-    // Clamp to map bounds
-    botRef.current.position.x = Math.max(-30, Math.min(30, botRef.current.position.x));
-    botRef.current.position.z = Math.max(-30, Math.min(30, botRef.current.position.z));
+    // Clamp to larger map bounds
+    botRef.current.position.x = Math.max(-55, Math.min(55, botRef.current.position.x));
+    botRef.current.position.z = Math.max(-55, Math.min(55, botRef.current.position.z));
     botRef.current.position.y = position[1];
 
     // Subtle bob animation
-    const bobAmount = 0.03;
-    botRef.current.position.y = position[1] + Math.sin(time * 3) * bobAmount;
+    const bobAmount = 0.02;
+    botRef.current.position.y = position[1] + Math.sin(time * 2) * bobAmount;
 
-    // Shooting behavior
+    // Shooting behavior - slower rate
     if (inCombatRange && isAiming) {
       shootTimer.current += delta;
       
-      // Shoot every 1-2 seconds
-      const shootInterval = 1 + Math.random() * 1;
+      // Shoot every 1.5-3 seconds (slower)
+      const shootInterval = 1.5 + Math.random() * 1.5;
       if (shootTimer.current > shootInterval) {
         shootTimer.current = 0;
         shootAtPlayer();
@@ -169,100 +279,153 @@ const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotPr
         distance={8}
       />
 
-      {/* Body - tactical vest */}
-      <mesh position={[0, 0.9, 0]} castShadow>
+      {/* Body - tactical vest with camo */}
+      <mesh position={[0, 0.9, 0]} castShadow material={materials.vest}>
         <capsuleGeometry args={[0.28, 0.7, 4, 12]} />
-        <meshStandardMaterial color={0x2a2a2a} metalness={0.2} roughness={0.8} />
+      </mesh>
+      
+      {/* Camo shirt under vest (visible at arms) */}
+      <mesh position={[0, 0.9, 0]} scale={[0.95, 1.02, 0.95]} material={materials.camo}>
+        <capsuleGeometry args={[0.29, 0.65, 4, 12]} />
+      </mesh>
+
+      {/* Vest front plate */}
+      <mesh position={[0, 0.9, 0.22]} castShadow material={materials.vest}>
+        <boxGeometry args={[0.4, 0.5, 0.08]} />
       </mesh>
       
       {/* Vest pouches */}
-      <mesh position={[0, 0.85, 0.25]} castShadow>
-        <boxGeometry args={[0.35, 0.2, 0.1]} />
-        <meshStandardMaterial color={0x3a3a3a} metalness={0.3} roughness={0.7} />
+      <mesh position={[0, 0.78, 0.28]} castShadow material={materials.pouch}>
+        <boxGeometry args={[0.35, 0.18, 0.1]} />
       </mesh>
-      <mesh position={[0.2, 0.75, 0.2]} castShadow>
-        <boxGeometry args={[0.08, 0.15, 0.08]} />
-        <meshStandardMaterial color={0x4a4a3a} metalness={0.2} roughness={0.8} />
+      <mesh position={[0.18, 0.72, 0.24]} castShadow material={materials.pouch}>
+        <boxGeometry args={[0.08, 0.14, 0.08]} />
       </mesh>
-      <mesh position={[-0.2, 0.75, 0.2]} castShadow>
-        <boxGeometry args={[0.08, 0.15, 0.08]} />
-        <meshStandardMaterial color={0x4a4a3a} metalness={0.2} roughness={0.8} />
+      <mesh position={[-0.18, 0.72, 0.24]} castShadow material={materials.pouch}>
+        <boxGeometry args={[0.08, 0.14, 0.08]} />
+      </mesh>
+      {/* Side pouches */}
+      <mesh position={[0.32, 0.85, 0]} castShadow material={materials.pouch}>
+        <boxGeometry args={[0.06, 0.12, 0.1]} />
+      </mesh>
+      <mesh position={[-0.32, 0.85, 0]} castShadow material={materials.pouch}>
+        <boxGeometry args={[0.06, 0.12, 0.1]} />
       </mesh>
 
-      {/* Head with helmet */}
-      <mesh position={[0, 1.55, 0]} castShadow>
-        <sphereGeometry args={[0.18, 12, 12]} />
-        <meshStandardMaterial color={0x5a4a3a} metalness={0.1} roughness={0.9} />
+      {/* Head */}
+      <mesh position={[0, 1.55, 0]} castShadow material={materials.skin}>
+        <sphereGeometry args={[0.17, 12, 12]} />
       </mesh>
       
-      {/* Helmet */}
-      <mesh position={[0, 1.62, 0]} castShadow>
+      {/* Helmet with texture */}
+      <mesh position={[0, 1.62, 0]} castShadow material={materials.helmet}>
         <sphereGeometry args={[0.22, 12, 12, 0, Math.PI * 2, 0, Math.PI * 0.6]} />
-        <meshStandardMaterial color={0x3a4a3a} metalness={0.3} roughness={0.7} />
+      </mesh>
+      
+      {/* Helmet rim */}
+      <mesh position={[0, 1.52, 0.08]} rotation={[-0.3, 0, 0]} material={materials.helmet}>
+        <boxGeometry args={[0.35, 0.04, 0.12]} />
+      </mesh>
+      
+      {/* Helmet straps */}
+      <mesh position={[0.18, 1.48, 0.08]} material={materials.vest}>
+        <boxGeometry args={[0.02, 0.08, 0.02]} />
+      </mesh>
+      <mesh position={[-0.18, 1.48, 0.08]} material={materials.vest}>
+        <boxGeometry args={[0.02, 0.08, 0.02]} />
       </mesh>
 
       {/* Goggles/visor */}
-      <mesh position={[0, 1.58, 0.16]}>
+      <mesh position={[0, 1.58, 0.16]} material={materials.goggles}>
         <boxGeometry args={[0.25, 0.06, 0.05]} />
-        <meshStandardMaterial 
-          color={0x111111} 
-          metalness={0.9} 
-          roughness={0.1}
-          emissive={isAiming ? 0xff2200 : 0x000000}
-          emissiveIntensity={isAiming ? 0.5 : 0}
-        />
       </mesh>
+      {/* Goggles glow when aiming */}
+      {isAiming && (
+        <mesh position={[0, 1.58, 0.18]}>
+          <boxGeometry args={[0.24, 0.05, 0.01]} />
+          <meshBasicMaterial color={0xff2200} transparent opacity={0.6} />
+        </mesh>
+      )}
 
-      {/* Arms */}
-      <mesh position={[0.35, 0.95, 0.1]} rotation={[0.3, 0, 0.4]} castShadow>
+      {/* Arms - camo sleeves */}
+      <mesh position={[0.35, 0.95, 0.08]} rotation={[0.3, 0, 0.4]} castShadow material={materials.camo}>
         <capsuleGeometry args={[0.07, 0.4, 4, 8]} />
-        <meshStandardMaterial color={0x3a3a3a} metalness={0.2} roughness={0.8} />
       </mesh>
-      <mesh position={[-0.35, 0.95, 0.1]} rotation={[0.3, 0, -0.4]} castShadow>
+      <mesh position={[-0.35, 0.95, 0.08]} rotation={[0.3, 0, -0.4]} castShadow material={materials.camo}>
         <capsuleGeometry args={[0.07, 0.4, 4, 8]} />
-        <meshStandardMaterial color={0x3a3a3a} metalness={0.2} roughness={0.8} />
       </mesh>
 
       {/* Forearms */}
-      <mesh position={[0.4, 0.7, 0.25]} rotation={[1.2, 0, 0.2]} castShadow>
+      <mesh position={[0.4, 0.7, 0.25]} rotation={[1.2, 0, 0.2]} castShadow material={materials.camo}>
         <capsuleGeometry args={[0.05, 0.3, 4, 8]} />
-        <meshStandardMaterial color={0x4a4a3a} metalness={0.2} roughness={0.8} />
       </mesh>
-      <mesh position={[-0.35, 0.75, 0.2]} rotation={[0.8, 0, -0.2]} castShadow>
+      <mesh position={[-0.35, 0.75, 0.2]} rotation={[0.8, 0, -0.2]} castShadow material={materials.camo}>
         <capsuleGeometry args={[0.05, 0.3, 4, 8]} />
-        <meshStandardMaterial color={0x4a4a3a} metalness={0.2} roughness={0.8} />
       </mesh>
 
-      {/* Weapon (simple rifle shape) */}
+      {/* Gloves */}
+      <mesh position={[0.42, 0.55, 0.38]} castShadow material={materials.vest}>
+        <sphereGeometry args={[0.05, 6, 6]} />
+      </mesh>
+      <mesh position={[-0.35, 0.6, 0.32]} castShadow material={materials.vest}>
+        <sphereGeometry args={[0.05, 6, 6]} />
+      </mesh>
+
+      {/* Weapon (detailed rifle) */}
       <group position={[0.15, 0.85, 0.35]} rotation={[0.3, 0, 0.1]}>
-        <mesh castShadow>
+        {/* Receiver */}
+        <mesh castShadow material={materials.metal}>
           <boxGeometry args={[0.04, 0.06, 0.4]} />
-          <meshStandardMaterial color={0x1a1a1a} metalness={0.8} roughness={0.3} />
         </mesh>
-        <mesh position={[0, 0.01, -0.25]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.012, 0.012, 0.15, 8]} />
-          <meshStandardMaterial color={0x2a2a2a} metalness={0.8} roughness={0.3} />
+        {/* Barrel */}
+        <mesh position={[0, 0.01, -0.28]} rotation={[Math.PI / 2, 0, 0]} material={materials.metal}>
+          <cylinderGeometry args={[0.012, 0.012, 0.18, 8]} />
+        </mesh>
+        {/* Stock */}
+        <mesh position={[0, -0.01, 0.22]} material={materials.metal}>
+          <boxGeometry args={[0.03, 0.05, 0.12]} />
+        </mesh>
+        {/* Magazine */}
+        <mesh position={[0, -0.08, 0]} rotation={[0.1, 0, 0]} material={materials.metal}>
+          <boxGeometry args={[0.02, 0.1, 0.04]} />
+        </mesh>
+        {/* Scope */}
+        <mesh position={[0, 0.06, -0.05]} rotation={[Math.PI / 2, 0, 0]} material={materials.metal}>
+          <cylinderGeometry args={[0.015, 0.015, 0.1, 8]} />
         </mesh>
       </group>
 
-      {/* Legs */}
-      <mesh position={[0.12, 0.25, 0]} castShadow>
+      {/* Legs - camo pants */}
+      <mesh position={[0.12, 0.25, 0]} castShadow material={materials.camo}>
         <capsuleGeometry args={[0.09, 0.45, 4, 8]} />
-        <meshStandardMaterial color={0x2a2a2a} metalness={0.2} roughness={0.8} />
       </mesh>
-      <mesh position={[-0.12, 0.25, 0]} castShadow>
+      <mesh position={[-0.12, 0.25, 0]} castShadow material={materials.camo}>
         <capsuleGeometry args={[0.09, 0.45, 4, 8]} />
-        <meshStandardMaterial color={0x2a2a2a} metalness={0.2} roughness={0.8} />
+      </mesh>
+
+      {/* Knee pads */}
+      <mesh position={[0.12, 0.25, 0.08]} castShadow material={materials.vest}>
+        <boxGeometry args={[0.08, 0.1, 0.04]} />
+      </mesh>
+      <mesh position={[-0.12, 0.25, 0.08]} castShadow material={materials.vest}>
+        <boxGeometry args={[0.08, 0.1, 0.04]} />
       </mesh>
 
       {/* Boots */}
-      <mesh position={[0.12, 0, 0.05]} castShadow>
-        <boxGeometry args={[0.12, 0.08, 0.2]} />
-        <meshStandardMaterial color={0x1a1a1a} metalness={0.3} roughness={0.9} />
+      <mesh position={[0.12, 0, 0.05]} castShadow material={materials.boots}>
+        <boxGeometry args={[0.12, 0.1, 0.22]} />
       </mesh>
-      <mesh position={[-0.12, 0, 0.05]} castShadow>
-        <boxGeometry args={[0.12, 0.08, 0.2]} />
-        <meshStandardMaterial color={0x1a1a1a} metalness={0.3} roughness={0.9} />
+      <mesh position={[-0.12, 0, 0.05]} castShadow material={materials.boots}>
+        <boxGeometry args={[0.12, 0.1, 0.22]} />
+      </mesh>
+
+      {/* Belt */}
+      <mesh position={[0, 0.55, 0]} material={materials.vest}>
+        <cylinderGeometry args={[0.28, 0.28, 0.06, 12, 1, true]} />
+      </mesh>
+      {/* Belt buckle */}
+      <mesh position={[0, 0.55, 0.28]} material={materials.metal}>
+        <boxGeometry args={[0.06, 0.04, 0.02]} />
       </mesh>
 
       {/* Health bar */}
@@ -279,9 +442,9 @@ const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotPr
 
       {/* Aiming indicator (laser sight effect when targeting player) */}
       {isAiming && (
-        <mesh position={[0.15, 0.85, 0.6]} rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.002, 0.002, 1, 4]} />
-          <meshBasicMaterial color={0xff0000} transparent opacity={0.3} />
+        <mesh position={[0.15, 0.85, 0.8]} rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.002, 0.002, 1.2, 4]} />
+          <meshBasicMaterial color={0xff0000} transparent opacity={0.25} />
         </mesh>
       )}
     </group>

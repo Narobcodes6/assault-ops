@@ -163,10 +163,10 @@ const FPSController = ({
     <>
       <PointerLockControls ref={controlsRef} />
       
-      {/* Weapon attached to camera */}
-      <group>
+      {/* Weapon attached to camera - rendered in camera space */}
+      <primitive object={camera}>
         <Weapon isScoped={isScoped} isShooting={isShooting} isMoving={isMoving} />
-      </group>
+      </primitive>
     </>
   );
 };
