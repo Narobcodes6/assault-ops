@@ -211,82 +211,168 @@ const Map = () => {
       roughness: 0.6,
       metalness: 0.1,
     }),
+    interior: new THREE.MeshStandardMaterial({ 
+      color: 0x3a3a38,
+      roughness: 0.95,
+      metalness: 0.05,
+    }),
   }), [textures]);
 
-  // Building configurations with variety
+  // Building configurations - larger map with more buildings
   const buildings = useMemo(() => [
-    { pos: [-15, 0, -15], size: [8, 14, 8], type: 'brick', windows: true },
-    { pos: [15, 0, -15], size: [10, 10, 6], type: 'concrete', windows: true },
-    { pos: [-15, 0, 15], size: [6, 18, 10], type: 'brick', windows: true },
-    { pos: [15, 0, 15], size: [8, 12, 8], type: 'concrete', windows: true },
-    { pos: [0, 0, -28], size: [22, 7, 5], type: 'concrete', windows: true },
-    { pos: [-28, 0, 0], size: [5, 10, 18], type: 'brick', windows: true },
-    { pos: [28, 0, 0], size: [5, 12, 14], type: 'concrete', windows: true },
-    { pos: [0, 0, 28], size: [18, 6, 5], type: 'brick', windows: true },
+    // Corner buildings
+    { pos: [-30, 0, -30], size: [10, 16, 10], type: 'brick', windows: true },
+    { pos: [30, 0, -30], size: [12, 12, 8], type: 'concrete', windows: true },
+    { pos: [-30, 0, 30], size: [8, 20, 12], type: 'brick', windows: true },
+    { pos: [30, 0, 30], size: [10, 14, 10], type: 'concrete', windows: true },
+    // Edge buildings
+    { pos: [0, 0, -45], size: [28, 8, 6], type: 'concrete', windows: true },
+    { pos: [-45, 0, 0], size: [6, 12, 22], type: 'brick', windows: true },
+    { pos: [45, 0, 0], size: [6, 14, 18], type: 'concrete', windows: true },
+    { pos: [0, 0, 45], size: [24, 7, 6], type: 'brick', windows: true },
+    // Mid buildings
+    { pos: [-20, 0, -15], size: [8, 10, 8], type: 'brick', windows: true },
+    { pos: [20, 0, -15], size: [10, 8, 6], type: 'concrete', windows: true },
+    { pos: [-20, 0, 18], size: [6, 14, 10], type: 'concrete', windows: true },
+    { pos: [20, 0, 18], size: [8, 10, 8], type: 'brick', windows: true },
+    // Additional buildings for variety
+    { pos: [-42, 0, -25], size: [6, 10, 12], type: 'brick', windows: true },
+    { pos: [42, 0, 25], size: [6, 12, 10], type: 'concrete', windows: true },
+    { pos: [-25, 0, -42], size: [10, 8, 6], type: 'concrete', windows: true },
+    { pos: [25, 0, 42], size: [12, 9, 6], type: 'brick', windows: true },
   ], []);
 
-  // Cover objects
+  // Cover objects - spread across larger map
   const covers = useMemo(() => [
-    { pos: [-6, 0.6, -6], size: [2.5, 1.2, 0.6], type: 'concrete' },
-    { pos: [6, 0.6, -6], size: [2.5, 1.2, 0.6], type: 'concrete' },
-    { pos: [-6, 0.6, 6], size: [0.6, 1.2, 2.5], type: 'metal' },
-    { pos: [6, 0.6, 6], size: [0.6, 1.2, 2.5], type: 'metal' },
-    { pos: [0, 0.9, 0], size: [3.5, 1.8, 3.5], type: 'concrete' },
-    { pos: [-11, 0.6, 0], size: [1.2, 1.2, 4], type: 'metal' },
-    { pos: [11, 0.6, 0], size: [1.2, 1.2, 4], type: 'metal' },
-    { pos: [0, 0.6, -11], size: [4, 1.2, 1.2], type: 'concrete' },
-    { pos: [0, 0.6, 11], size: [4, 1.2, 1.2], type: 'concrete' },
+    { pos: [-10, 0.6, -10], size: [2.5, 1.2, 0.6], type: 'concrete' },
+    { pos: [10, 0.6, -10], size: [2.5, 1.2, 0.6], type: 'concrete' },
+    { pos: [-10, 0.6, 10], size: [0.6, 1.2, 2.5], type: 'metal' },
+    { pos: [10, 0.6, 10], size: [0.6, 1.2, 2.5], type: 'metal' },
+    { pos: [-18, 0.6, 0], size: [1.2, 1.2, 4], type: 'metal' },
+    { pos: [18, 0.6, 0], size: [1.2, 1.2, 4], type: 'metal' },
+    { pos: [0, 0.6, -18], size: [4, 1.2, 1.2], type: 'concrete' },
+    { pos: [0, 0.6, 18], size: [4, 1.2, 1.2], type: 'concrete' },
+    // More cover spread out
+    { pos: [-30, 0.6, 10], size: [3, 1.4, 0.6], type: 'concrete' },
+    { pos: [30, 0.6, -10], size: [3, 1.4, 0.6], type: 'concrete' },
+    { pos: [-15, 0.6, 30], size: [0.6, 1.2, 3], type: 'metal' },
+    { pos: [15, 0.6, -30], size: [0.6, 1.2, 3], type: 'metal' },
   ], []);
 
   // Debris and props
   const debris = useMemo(() => [
-    { pos: [-8, 0.15, -3], size: [0.5, 0.3, 0.4] },
-    { pos: [7, 0.1, 4], size: [0.3, 0.2, 0.3] },
-    { pos: [-3, 0.2, 8], size: [0.6, 0.4, 0.5] },
-    { pos: [4, 0.15, -7], size: [0.4, 0.3, 0.4] },
-    { pos: [-5, 0.1, -8], size: [0.3, 0.2, 0.25] },
+    { pos: [-12, 0.15, -5], size: [0.5, 0.3, 0.4] },
+    { pos: [12, 0.1, 6], size: [0.3, 0.2, 0.3] },
+    { pos: [-5, 0.2, 12], size: [0.6, 0.4, 0.5] },
+    { pos: [6, 0.15, -12], size: [0.4, 0.3, 0.4] },
+    { pos: [-8, 0.1, -12], size: [0.3, 0.2, 0.25] },
+    { pos: [20, 0.15, 8], size: [0.5, 0.3, 0.4] },
+    { pos: [-20, 0.1, -8], size: [0.4, 0.25, 0.35] },
   ], []);
 
   return (
     <group>
-      {/* Ground plane with texture */}
+      {/* Ground plane with texture - larger */}
       <mesh 
         rotation={[-Math.PI / 2, 0, 0]} 
         position={[0, 0, 0]}
         receiveShadow
       >
-        <planeGeometry args={[80, 80]} />
+        <planeGeometry args={[120, 120]} />
         <primitive object={materials.ground} attach="material" />
       </mesh>
 
-      {/* Road markings */}
+      {/* SPAWN BUILDING - Player spawns inside this */}
+      <group position={[0, 0, 5]}>
+        {/* Floor */}
+        <mesh position={[0, 0.05, 0]} receiveShadow>
+          <boxGeometry args={[10, 0.1, 12]} />
+          <primitive object={materials.interior} attach="material" />
+        </mesh>
+        {/* Back wall */}
+        <mesh position={[0, 2, 6]} castShadow>
+          <boxGeometry args={[10, 4, 0.3]} />
+          <primitive object={materials.concrete} attach="material" />
+        </mesh>
+        {/* Left wall */}
+        <mesh position={[-5, 2, 0]} castShadow>
+          <boxGeometry args={[0.3, 4, 12]} />
+          <primitive object={materials.concrete} attach="material" />
+        </mesh>
+        {/* Right wall */}
+        <mesh position={[5, 2, 0]} castShadow>
+          <boxGeometry args={[0.3, 4, 12]} />
+          <primitive object={materials.concrete} attach="material" />
+        </mesh>
+        {/* Front wall left section */}
+        <mesh position={[-3.5, 2, -6]} castShadow>
+          <boxGeometry args={[3, 4, 0.3]} />
+          <primitive object={materials.concrete} attach="material" />
+        </mesh>
+        {/* Front wall right section */}
+        <mesh position={[3.5, 2, -6]} castShadow>
+          <boxGeometry args={[3, 4, 0.3]} />
+          <primitive object={materials.concrete} attach="material" />
+        </mesh>
+        {/* Front wall top (above door) */}
+        <mesh position={[0, 3.5, -6]} castShadow>
+          <boxGeometry args={[4, 1, 0.3]} />
+          <primitive object={materials.concrete} attach="material" />
+        </mesh>
+        {/* Roof */}
+        <mesh position={[0, 4.15, 0]} receiveShadow castShadow>
+          <boxGeometry args={[10.5, 0.3, 12.5]} />
+          <primitive object={materials.roofTar} attach="material" />
+        </mesh>
+        {/* Window on left */}
+        <mesh position={[-5.16, 2, 2]}>
+          <planeGeometry args={[0.01, 1.5]} />
+          <primitive object={materials.window} attach="material" />
+        </mesh>
+        {/* Ammo crates inside */}
+        <mesh position={[-3, 0.4, 4]} castShadow>
+          <boxGeometry args={[1, 0.8, 0.6]} />
+          <meshStandardMaterial color={0x3a4a3a} roughness={0.9} />
+        </mesh>
+        <mesh position={[-3.5, 0.25, 3]} castShadow>
+          <boxGeometry args={[0.5, 0.5, 0.4]} />
+          <meshStandardMaterial color={0x4a4a3a} roughness={0.9} />
+        </mesh>
+        {/* Spawn point light */}
+        <pointLight position={[0, 3, 0]} color={0xffffdd} intensity={8} distance={12} />
+      </group>
+
+      {/* Road markings - larger */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-        <planeGeometry args={[6, 80]} />
+        <planeGeometry args={[7, 120]} />
         <meshStandardMaterial color={0x222222} roughness={0.95} />
       </mesh>
       <mesh rotation={[-Math.PI / 2, 0, Math.PI / 2]} position={[0, 0.01, 0]}>
-        <planeGeometry args={[6, 80]} />
+        <planeGeometry args={[7, 120]} />
         <meshStandardMaterial color={0x222222} roughness={0.95} />
       </mesh>
       
       {/* Road center lines */}
-      {[-30, -20, -10, 10, 20, 30].map((z, i) => (
+      {[-50, -40, -30, -20, 20, 30, 40, 50].map((z, i) => (
         <mesh key={`line-z-${i}`} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, z]}>
-          <planeGeometry args={[0.15, 4]} />
+          <planeGeometry args={[0.15, 5]} />
           <primitive object={materials.yellow} attach="material" />
         </mesh>
       ))}
-      {[-30, -20, -10, 10, 20, 30].map((x, i) => (
+      {[-50, -40, -30, -20, 20, 30, 40, 50].map((x, i) => (
         <mesh key={`line-x-${i}`} rotation={[-Math.PI / 2, 0, Math.PI / 2]} position={[x, 0.02, 0]}>
-          <planeGeometry args={[0.15, 4]} />
+          <planeGeometry args={[0.15, 5]} />
           <primitive object={materials.yellow} attach="material" />
         </mesh>
       ))}
 
-      {/* Sidewalks */}
-      {[[-5, 0.08, -20], [5, 0.08, -20], [-5, 0.08, 20], [5, 0.08, 20], [-20, 0.08, -5], [-20, 0.08, 5], [20, 0.08, -5], [20, 0.08, 5]].map((pos, i) => (
+      {/* Sidewalks - larger area */}
+      {[
+        [-6, 0.08, -35], [6, 0.08, -35], [-6, 0.08, 35], [6, 0.08, 35], 
+        [-35, 0.08, -6], [-35, 0.08, 6], [35, 0.08, -6], [35, 0.08, 6]
+      ].map((pos, i) => (
         <mesh key={`sidewalk-${i}`} position={pos as [number, number, number]} receiveShadow>
-          <boxGeometry args={[4, 0.16, 30]} />
+          <boxGeometry args={[5, 0.16, 50]} />
           <primitive object={materials.concrete} attach="material" />
         </mesh>
       ))}
@@ -456,8 +542,12 @@ const Map = () => {
         </group>
       ))}
 
-      {/* Street lamps */}
-      {[[-14, 0, 0], [14, 0, 0], [0, 0, -14], [0, 0, 14], [-14, 0, 14], [14, 0, -14]].map((pos, i) => (
+      {/* Street lamps - more across larger map */}
+      {[
+        [-20, 0, 0], [20, 0, 0], [0, 0, -20], [0, 0, 20], 
+        [-20, 0, 20], [20, 0, -20], [-20, 0, -20], [20, 0, 20],
+        [-35, 0, 0], [35, 0, 0], [0, 0, -35], [0, 0, 35]
+      ].map((pos, i) => (
         <group key={`lamp-${i}`} position={pos as [number, number, number]}>
           {/* Pole */}
           <mesh position={[0, 3.5, 0]} castShadow>
@@ -478,11 +568,11 @@ const Map = () => {
           <pointLight 
             position={[1.1, 6.3, 0]} 
             color={0xffcc88} 
-            intensity={20} 
-            distance={18}
+            intensity={15} 
+            distance={20}
             castShadow
-            shadow-mapSize-width={512}
-            shadow-mapSize-height={512}
+            shadow-mapSize-width={256}
+            shadow-mapSize-height={256}
           />
           {/* Light glow */}
           <mesh position={[1.1, 6.45, 0]}>
@@ -493,7 +583,7 @@ const Map = () => {
       ))}
 
       {/* Utility poles with wires */}
-      {[[-25, 0, -25], [25, 0, 25]].map((pos, i) => (
+      {[[-40, 0, -40], [40, 0, 40], [-40, 0, 40], [40, 0, -40]].map((pos, i) => (
         <group key={`utility-${i}`} position={pos as [number, number, number]}>
           <mesh position={[0, 5, 0]} castShadow>
             <cylinderGeometry args={[0.1, 0.15, 10, 6]} />
@@ -507,15 +597,15 @@ const Map = () => {
       ))}
 
       {/* Manhole covers */}
-      {[[5, 0.02, 5], [-5, 0.02, -5], [8, 0.02, -8]].map((pos, i) => (
+      {[[8, 0.02, 8], [-8, 0.02, -8], [12, 0.02, -12], [-15, 0.02, 15]].map((pos, i) => (
         <mesh key={`manhole-${i}`} position={pos as [number, number, number]} rotation={[-Math.PI / 2, 0, 0]}>
           <circleGeometry args={[0.4, 12]} />
           <primitive object={materials.rust} attach="material" />
         </mesh>
       ))}
 
-      {/* Fog/atmosphere */}
-      <fog attach="fog" args={[0x1a1a1f, 20, 65]} />
+      {/* Fog/atmosphere - extended for larger map */}
+      <fog attach="fog" args={[0x1a1a1f, 30, 90]} />
     </group>
   );
 };

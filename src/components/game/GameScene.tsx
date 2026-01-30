@@ -33,17 +33,18 @@ const GameScene = ({ onGameOver }: GameSceneProps) => {
   const [isShooting, setIsShooting] = useState(false);
   const [playerPosition, setPlayerPosition] = useState(new THREE.Vector3(0, 1.7, 0));
   const [damageFlash, setDamageFlash] = useState(false);
+  // Spawn bots spread across the larger map
   const [bots, setBots] = useState([
-    { id: 1, position: [-12, 0, -12] as [number, number, number], alive: true },
-    { id: 2, position: [12, 0, -12] as [number, number, number], alive: true },
-    { id: 3, position: [-12, 0, 12] as [number, number, number], alive: true },
-    { id: 4, position: [12, 0, 12] as [number, number, number], alive: true },
-    { id: 5, position: [0, 0, -22] as [number, number, number], alive: true },
-    { id: 6, position: [0, 0, 22] as [number, number, number], alive: true },
-    { id: 7, position: [-22, 0, 0] as [number, number, number], alive: true },
-    { id: 8, position: [22, 0, 0] as [number, number, number], alive: true },
-    { id: 9, position: [-18, 0, -18] as [number, number, number], alive: true },
-    { id: 10, position: [18, 0, 18] as [number, number, number], alive: true },
+    { id: 1, position: [-25, 0, -25] as [number, number, number], alive: true },
+    { id: 2, position: [25, 0, -25] as [number, number, number], alive: true },
+    { id: 3, position: [-25, 0, 25] as [number, number, number], alive: true },
+    { id: 4, position: [25, 0, 25] as [number, number, number], alive: true },
+    { id: 5, position: [0, 0, -40] as [number, number, number], alive: true },
+    { id: 6, position: [0, 0, 40] as [number, number, number], alive: true },
+    { id: 7, position: [-40, 0, 0] as [number, number, number], alive: true },
+    { id: 8, position: [40, 0, 0] as [number, number, number], alive: true },
+    { id: 9, position: [-35, 0, -35] as [number, number, number], alive: true },
+    { id: 10, position: [35, 0, 35] as [number, number, number], alive: true },
   ]);
 
   const raycaster = useMemo(() => new THREE.Raycaster(), []);
@@ -112,7 +113,7 @@ const GameScene = ({ onGameOver }: GameSceneProps) => {
     <>
       <Canvas
         shadows
-        camera={{ position: [0, 1.7, 0], fov: 75 }}
+        camera={{ position: [0, 1.7, 8], fov: 75 }}
         onCreated={({ scene }) => { sceneRef.current = scene; }}
         style={{ position: 'fixed', inset: 0 }}
       >
