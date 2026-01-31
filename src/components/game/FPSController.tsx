@@ -148,9 +148,9 @@ const FPSController = ({
       if (Math.abs(velocity.current.z) < 0.0001) velocity.current.z = 0;
     }
 
-    // Apply movement
-    controlsRef.current.moveRight(-velocity.current.x);
-    controlsRef.current.moveForward(-velocity.current.z);
+    // Apply movement - positive Z = forward (W key)
+    controlsRef.current.moveRight(velocity.current.x);
+    controlsRef.current.moveForward(velocity.current.z);
 
     // Keep camera at player height with subtle head bob
     const bobAmount = isCurrentlyMoving ? Math.sin(Date.now() * 0.008) * 0.015 : 0;

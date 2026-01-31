@@ -128,23 +128,45 @@ const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotPr
     };
   }, []);
 
-  useEffect(() => {
-    if (health <= 0 && !isDead) {
-      setIsDead(true);
-      onHit();
-    }
-  }, [health, isDead, onHit]);
+  // Use refs for death handling to prevent freezing from rapid state updates
+  const isDeadRef = useRef(false);
+  const healthRef = useRef(health);
+  healthRef.current = health;
 
-  // Expose hit function for raycasting
+  useEffect(() => {
+    if (health <= 0 && !isDeadRef.current) {
+      isDeadRef.current = true;
+      setIsDead(true);
+      // Delay the onHit callback to prevent cascade of updates
+      requestAnimationFrame(() => {
+        onHit();
+      });
+    }
+  }, [health, onHit]);
+
+  // Throttle damage to prevent freezing from rapid hits
+  const lastDamageTime = useRef(0);
+  const pendingDamage = useRef(0);
+
+  // Expose hit function for raycasting - use refs to prevent freezing
   useEffect(() => {
     if (botRef.current) {
       (botRef.current as any).takeDamage = (damage: number) => {
-        if (!isDead) {
-          setHealth((prev) => Math.max(0, prev - damage));
+        if (!isDeadRef.current) {
+          const now = Date.now();
+          // Accumulate damage and apply in batches
+          pendingDamage.current += damage;
+          
+          if (now - lastDamageTime.current > 100) {
+            lastDamageTime.current = now;
+            const totalDamage = pendingDamage.current;
+            pendingDamage.current = 0;
+            setHealth((prev) => Math.max(0, prev - totalDamage));
+          }
         }
       };
     }
-  }, [isDead]);
+  }, []);
 
   const shootAtPlayer = useCallback(() => {
     if (!botRef.current || isDead || !canShoot.current) return;
@@ -277,7 +299,7 @@ const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotPr
   if (isDead) return null;
 
   return (
-    <group ref={botRef} position={position} userData={{ isBot: true, takeDamage: (d: number) => setHealth((prev) => Math.max(0, prev - d)) }}>
+    <group ref={botRef} position={position} userData={{ isBot: true }}>
       {/* Muzzle flash light */}
       <pointLight 
         ref={muzzleFlashRef}
