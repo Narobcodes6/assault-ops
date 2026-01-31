@@ -148,25 +148,28 @@ const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotPr
   const lastDamageTime = useRef(0);
   const pendingDamage = useRef(0);
 
-  // Expose hit function for raycasting - use refs to prevent freezing
-  useEffect(() => {
-    if (botRef.current) {
-      (botRef.current as any).takeDamage = (damage: number) => {
-        if (!isDeadRef.current) {
-          const now = Date.now();
-          // Accumulate damage and apply in batches
-          pendingDamage.current += damage;
-          
-          if (now - lastDamageTime.current > 100) {
-            lastDamageTime.current = now;
-            const totalDamage = pendingDamage.current;
-            pendingDamage.current = 0;
-            setHealth((prev) => Math.max(0, prev - totalDamage));
-          }
-        }
-      };
+  // Create stable takeDamage function
+  const takeDamage = useCallback((damage: number) => {
+    if (isDeadRef.current) return;
+    
+    const now = Date.now();
+    pendingDamage.current += damage;
+    
+    // Batch damage updates to prevent freezing
+    if (now - lastDamageTime.current > 100) {
+      lastDamageTime.current = now;
+      const totalDamage = pendingDamage.current;
+      pendingDamage.current = 0;
+      setHealth((prev) => Math.max(0, prev - totalDamage));
     }
   }, []);
+
+  // Expose hit function for raycasting via userData
+  useEffect(() => {
+    if (botRef.current) {
+      botRef.current.userData.takeDamage = takeDamage;
+    }
+  }, [takeDamage]);
 
   const shootAtPlayer = useCallback(() => {
     if (!botRef.current || isDead || !canShoot.current) return;
@@ -274,9 +277,9 @@ const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotPr
       botRef.current.position.add(moveDir.multiplyScalar(delta * moveSpeed));
     }
 
-    // Clamp to larger map bounds
-    botRef.current.position.x = Math.max(-55, Math.min(55, botRef.current.position.x));
-    botRef.current.position.z = Math.max(-55, Math.min(55, botRef.current.position.z));
+    // Clamp to much larger map bounds
+    botRef.current.position.x = Math.max(-95, Math.min(95, botRef.current.position.x));
+    botRef.current.position.z = Math.max(-95, Math.min(95, botRef.current.position.z));
     botRef.current.position.y = position[1];
 
     // Subtle bob animation

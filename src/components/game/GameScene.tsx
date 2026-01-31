@@ -33,18 +33,22 @@ const GameScene = ({ onGameOver }: GameSceneProps) => {
   const [isShooting, setIsShooting] = useState(false);
   const [playerPosition, setPlayerPosition] = useState(new THREE.Vector3(0, 1.7, 0));
   const [damageFlash, setDamageFlash] = useState(false);
-  // Spawn bots spread across the larger map
+  // Spawn bots spread across the much larger map
   const [bots, setBots] = useState([
-    { id: 1, position: [-25, 0, -25] as [number, number, number], alive: true },
-    { id: 2, position: [25, 0, -25] as [number, number, number], alive: true },
-    { id: 3, position: [-25, 0, 25] as [number, number, number], alive: true },
-    { id: 4, position: [25, 0, 25] as [number, number, number], alive: true },
-    { id: 5, position: [0, 0, -40] as [number, number, number], alive: true },
-    { id: 6, position: [0, 0, 40] as [number, number, number], alive: true },
-    { id: 7, position: [-40, 0, 0] as [number, number, number], alive: true },
-    { id: 8, position: [40, 0, 0] as [number, number, number], alive: true },
-    { id: 9, position: [-35, 0, -35] as [number, number, number], alive: true },
-    { id: 10, position: [35, 0, 35] as [number, number, number], alive: true },
+    { id: 1, position: [-40, 0, -40] as [number, number, number], alive: true },
+    { id: 2, position: [40, 0, -40] as [number, number, number], alive: true },
+    { id: 3, position: [-40, 0, 40] as [number, number, number], alive: true },
+    { id: 4, position: [40, 0, 40] as [number, number, number], alive: true },
+    { id: 5, position: [0, 0, -70] as [number, number, number], alive: true },
+    { id: 6, position: [0, 0, 70] as [number, number, number], alive: true },
+    { id: 7, position: [-70, 0, 0] as [number, number, number], alive: true },
+    { id: 8, position: [70, 0, 0] as [number, number, number], alive: true },
+    { id: 9, position: [-55, 0, -55] as [number, number, number], alive: true },
+    { id: 10, position: [55, 0, 55] as [number, number, number], alive: true },
+    { id: 11, position: [-30, 0, 60] as [number, number, number], alive: true },
+    { id: 12, position: [30, 0, -60] as [number, number, number], alive: true },
+    { id: 13, position: [-60, 0, 30] as [number, number, number], alive: true },
+    { id: 14, position: [60, 0, -30] as [number, number, number], alive: true },
   ]);
 
   const raycaster = useMemo(() => new THREE.Raycaster(), []);
@@ -143,7 +147,7 @@ const GameScene = ({ onGameOver }: GameSceneProps) => {
         />
 
         {/* Fog for atmosphere */}
-        <fog attach="fog" args={['#1a1a20', 25, 70]} />
+        <fog attach="fog" args={['#1a1a20', 40, 120]} />
 
         <Suspense fallback={null}>
           {/* Track player position for bots */}

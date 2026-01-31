@@ -156,9 +156,9 @@ const FPSController = ({
     const bobAmount = isCurrentlyMoving ? Math.sin(Date.now() * 0.008) * 0.015 : 0;
     camera.position.y = 1.7 + bobAmount;
 
-    // Clamp position to larger map bounds
-    camera.position.x = Math.max(-55, Math.min(55, camera.position.x));
-    camera.position.z = Math.max(-55, Math.min(55, camera.position.z));
+    // Clamp position to much larger map bounds
+    camera.position.x = Math.max(-95, Math.min(95, camera.position.x));
+    camera.position.z = Math.max(-95, Math.min(95, camera.position.z));
 
     // Smooth FOV transition for scope
     const targetFov = isScoped ? 30 : 75;

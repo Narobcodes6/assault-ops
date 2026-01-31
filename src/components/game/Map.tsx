@@ -339,32 +339,48 @@ const Map = () => {
     }),
   }), [textures]);
 
-  // Building configurations - larger map with more buildings
+  // Building configurations - MUCH larger map with more buildings
   const buildings = useMemo(() => [
-    // Corner buildings
+    // Inner ring buildings
     { pos: [-30, 0, -30], size: [10, 16, 10], type: 'brick', windows: true },
     { pos: [30, 0, -30], size: [12, 12, 8], type: 'concrete', windows: true },
     { pos: [-30, 0, 30], size: [8, 20, 12], type: 'brick', windows: true },
     { pos: [30, 0, 30], size: [10, 14, 10], type: 'concrete', windows: true },
-    // Edge buildings
-    { pos: [0, 0, -45], size: [28, 8, 6], type: 'concrete', windows: true },
-    { pos: [-45, 0, 0], size: [6, 12, 22], type: 'brick', windows: true },
-    { pos: [45, 0, 0], size: [6, 14, 18], type: 'concrete', windows: true },
-    { pos: [0, 0, 45], size: [24, 7, 6], type: 'brick', windows: true },
-    // Mid buildings
+    // Mid ring buildings
+    { pos: [0, 0, -55], size: [28, 8, 6], type: 'concrete', windows: true },
+    { pos: [-55, 0, 0], size: [6, 12, 22], type: 'brick', windows: true },
+    { pos: [55, 0, 0], size: [6, 14, 18], type: 'concrete', windows: true },
+    { pos: [0, 0, 55], size: [24, 7, 6], type: 'brick', windows: true },
     { pos: [-20, 0, -15], size: [8, 10, 8], type: 'brick', windows: true },
     { pos: [20, 0, -15], size: [10, 8, 6], type: 'concrete', windows: true },
     { pos: [-20, 0, 18], size: [6, 14, 10], type: 'concrete', windows: true },
     { pos: [20, 0, 18], size: [8, 10, 8], type: 'brick', windows: true },
-    // Additional buildings for variety
-    { pos: [-42, 0, -25], size: [6, 10, 12], type: 'brick', windows: true },
-    { pos: [42, 0, 25], size: [6, 12, 10], type: 'concrete', windows: true },
-    { pos: [-25, 0, -42], size: [10, 8, 6], type: 'concrete', windows: true },
-    { pos: [25, 0, 42], size: [12, 9, 6], type: 'brick', windows: true },
+    // Outer ring buildings - NEW
+    { pos: [-70, 0, -40], size: [12, 18, 10], type: 'brick', windows: true },
+    { pos: [70, 0, -40], size: [10, 14, 12], type: 'concrete', windows: true },
+    { pos: [-70, 0, 40], size: [14, 12, 8], type: 'concrete', windows: true },
+    { pos: [70, 0, 40], size: [8, 20, 10], type: 'brick', windows: true },
+    { pos: [-40, 0, -70], size: [10, 10, 14], type: 'brick', windows: true },
+    { pos: [40, 0, -70], size: [12, 12, 10], type: 'concrete', windows: true },
+    { pos: [-40, 0, 70], size: [8, 14, 12], type: 'concrete', windows: true },
+    { pos: [40, 0, 70], size: [10, 10, 8], type: 'brick', windows: true },
+    // Far corners
+    { pos: [-80, 0, -80], size: [14, 22, 14], type: 'brick', windows: true },
+    { pos: [80, 0, -80], size: [12, 16, 12], type: 'concrete', windows: true },
+    { pos: [-80, 0, 80], size: [10, 18, 10], type: 'concrete', windows: true },
+    { pos: [80, 0, 80], size: [14, 14, 14], type: 'brick', windows: true },
+    // Additional scattered buildings
+    { pos: [-52, 0, -25], size: [6, 10, 12], type: 'brick', windows: true },
+    { pos: [52, 0, 25], size: [6, 12, 10], type: 'concrete', windows: true },
+    { pos: [-25, 0, -52], size: [10, 8, 6], type: 'concrete', windows: true },
+    { pos: [25, 0, 52], size: [12, 9, 6], type: 'brick', windows: true },
+    { pos: [-60, 0, 60], size: [8, 10, 8], type: 'brick', windows: true },
+    { pos: [60, 0, -60], size: [10, 12, 10], type: 'concrete', windows: true },
   ], []);
 
-  // Cover objects - spread across larger map
+  // Cover objects - spread across much larger map
   const covers = useMemo(() => [
+    // Inner area cover
     { pos: [-10, 0.6, -10], size: [2.5, 1.2, 0.6], type: 'concrete' },
     { pos: [10, 0.6, -10], size: [2.5, 1.2, 0.6], type: 'concrete' },
     { pos: [-10, 0.6, 10], size: [0.6, 1.2, 2.5], type: 'metal' },
@@ -373,14 +389,28 @@ const Map = () => {
     { pos: [18, 0.6, 0], size: [1.2, 1.2, 4], type: 'metal' },
     { pos: [0, 0.6, -18], size: [4, 1.2, 1.2], type: 'concrete' },
     { pos: [0, 0.6, 18], size: [4, 1.2, 1.2], type: 'concrete' },
-    // More cover spread out
+    // Mid area cover
     { pos: [-30, 0.6, 10], size: [3, 1.4, 0.6], type: 'concrete' },
     { pos: [30, 0.6, -10], size: [3, 1.4, 0.6], type: 'concrete' },
     { pos: [-15, 0.6, 30], size: [0.6, 1.2, 3], type: 'metal' },
     { pos: [15, 0.6, -30], size: [0.6, 1.2, 3], type: 'metal' },
+    // Outer area cover - NEW
+    { pos: [-50, 0.6, -20], size: [3, 1.5, 0.8], type: 'concrete' },
+    { pos: [50, 0.6, 20], size: [3, 1.5, 0.8], type: 'concrete' },
+    { pos: [-20, 0.6, -50], size: [0.8, 1.5, 3], type: 'metal' },
+    { pos: [20, 0.6, 50], size: [0.8, 1.5, 3], type: 'metal' },
+    { pos: [-60, 0.6, 30], size: [4, 1.3, 0.6], type: 'concrete' },
+    { pos: [60, 0.6, -30], size: [4, 1.3, 0.6], type: 'concrete' },
+    { pos: [-35, 0.6, 55], size: [0.6, 1.2, 4], type: 'metal' },
+    { pos: [35, 0.6, -55], size: [0.6, 1.2, 4], type: 'metal' },
+    // Far corners cover
+    { pos: [-70, 0.6, -60], size: [3, 1.4, 0.7], type: 'concrete' },
+    { pos: [70, 0.6, 60], size: [3, 1.4, 0.7], type: 'concrete' },
+    { pos: [-65, 0.6, 70], size: [0.7, 1.4, 3], type: 'metal' },
+    { pos: [65, 0.6, -70], size: [0.7, 1.4, 3], type: 'metal' },
   ], []);
 
-  // Debris and props
+  // Debris and props - spread across map
   const debris = useMemo(() => [
     { pos: [-12, 0.15, -5], size: [0.5, 0.3, 0.4] },
     { pos: [12, 0.1, 6], size: [0.3, 0.2, 0.3] },
@@ -389,44 +419,60 @@ const Map = () => {
     { pos: [-8, 0.1, -12], size: [0.3, 0.2, 0.25] },
     { pos: [20, 0.15, 8], size: [0.5, 0.3, 0.4] },
     { pos: [-20, 0.1, -8], size: [0.4, 0.25, 0.35] },
+    // More debris for larger map
+    { pos: [-45, 0.15, 30], size: [0.5, 0.3, 0.4] },
+    { pos: [45, 0.1, -30], size: [0.4, 0.25, 0.35] },
+    { pos: [-30, 0.2, -45], size: [0.6, 0.4, 0.5] },
+    { pos: [30, 0.15, 45], size: [0.5, 0.3, 0.4] },
   ], []);
 
   return (
     <group>
-      {/* Ground plane with texture - larger */}
+      {/* Ground plane with texture - MUCH larger */}
       <mesh 
         rotation={[-Math.PI / 2, 0, 0]} 
         position={[0, 0, 0]}
         receiveShadow
       >
-        <planeGeometry args={[120, 120]} />
+        <planeGeometry args={[200, 200]} />
         <primitive object={materials.ground} attach="material" />
       </mesh>
 
-      {/* Grass patches around map edges */}
+      {/* Grass patches around map - more of them for larger map */}
       {[
         [-45, 0.01, -35], [45, 0.01, 35], [-35, 0.01, 45], [35, 0.01, -45],
         [-50, 0.01, 20], [50, 0.01, -20], [-20, 0.01, 50], [20, 0.01, -50],
+        // Outer grass patches
+        [-75, 0.01, -50], [75, 0.01, 50], [-50, 0.01, 75], [50, 0.01, -75],
+        [-80, 0.01, 20], [80, 0.01, -20], [-20, 0.01, 80], [20, 0.01, -80],
+        [-90, 0.01, -70], [90, 0.01, 70], [-70, 0.01, 90], [70, 0.01, -90],
       ].map((pos, i) => (
         <mesh key={`grass-${i}`} rotation={[-Math.PI / 2, 0, Math.random() * Math.PI]} position={pos as [number, number, number]} receiveShadow>
-          <planeGeometry args={[12 + Math.random() * 6, 10 + Math.random() * 5]} />
+          <planeGeometry args={[12 + Math.random() * 8, 10 + Math.random() * 6]} />
           <primitive object={materials.grass} attach="material" />
         </mesh>
       ))}
 
-      {/* Dirt patches */}
+      {/* Dirt patches - more for larger map */}
       {[
         [-25, 0.01, 25], [25, 0.01, -25], [-38, 0.01, -8], [38, 0.01, 8],
+        // Outer dirt patches
+        [-60, 0.01, 45], [60, 0.01, -45], [-45, 0.01, 60], [45, 0.01, -60],
+        [-85, 0.01, 30], [85, 0.01, -30], [-30, 0.01, 85], [30, 0.01, -85],
       ].map((pos, i) => (
         <mesh key={`dirt-${i}`} rotation={[-Math.PI / 2, 0, Math.random() * Math.PI]} position={pos as [number, number, number]} receiveShadow>
-          <planeGeometry args={[8 + Math.random() * 4, 6 + Math.random() * 3]} />
+          <planeGeometry args={[10 + Math.random() * 5, 8 + Math.random() * 4]} />
           <primitive object={materials.dirt} attach="material" />
         </mesh>
       ))}
 
-      {/* Wooden crates scattered around */}
+      {/* Wooden crates scattered around - more for larger map */}
       {[
         [-22, 0.5, 12], [22, 0.5, -12], [-8, 0.35, -22], [15, 0.4, 28],
+        // Outer crates
+        [-55, 0.5, 35], [55, 0.5, -35], [-35, 0.4, 55], [35, 0.45, -55],
+        [-75, 0.5, 15], [75, 0.5, -15], [-15, 0.4, 75], [15, 0.45, -75],
+        [-65, 0.5, -50], [65, 0.5, 50], [-50, 0.4, 65], [50, 0.45, -65],
       ].map((pos, i) => (
         <mesh key={`crate-${i}`} position={pos as [number, number, number]} rotation={[0, Math.random() * 0.5, 0]} castShadow>
           <boxGeometry args={[0.8 + Math.random() * 0.4, 0.7 + Math.random() * 0.3, 0.8 + Math.random() * 0.4]} />
