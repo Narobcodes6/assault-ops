@@ -144,30 +144,28 @@ const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotPr
     }
   }, [health, onHit]);
 
-  // Throttle damage to prevent freezing from rapid hits
-  const lastDamageTime = useRef(0);
-  const pendingDamage = useRef(0);
-
-  // Create stable takeDamage function
+  // Create stable takeDamage function - apply damage immediately but use refs to prevent re-render cascade
   const takeDamage = useCallback((damage: number) => {
     if (isDeadRef.current) return;
     
-    const now = Date.now();
-    pendingDamage.current += damage;
-    
-    // Batch damage updates to prevent freezing
-    if (now - lastDamageTime.current > 100) {
-      lastDamageTime.current = now;
-      const totalDamage = pendingDamage.current;
-      pendingDamage.current = 0;
-      setHealth((prev) => Math.max(0, prev - totalDamage));
-    }
+    // Apply damage immediately using functional update
+    setHealth((prev) => {
+      const newHealth = Math.max(0, prev - damage);
+      return newHealth;
+    });
   }, []);
 
-  // Expose hit function for raycasting via userData
+  // Expose hit function for raycasting via userData - attach to group AND all children
   useEffect(() => {
     if (botRef.current) {
+      botRef.current.userData.isBot = true;
       botRef.current.userData.takeDamage = takeDamage;
+      
+      // Also attach to all children so raycast can find it from any hit mesh
+      botRef.current.traverse((child) => {
+        child.userData.isBot = true;
+        child.userData.takeDamage = takeDamage;
+      });
     }
   }, [takeDamage]);
 
