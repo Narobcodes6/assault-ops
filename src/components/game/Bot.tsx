@@ -130,38 +130,46 @@ const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotPr
 
   // Use refs for death handling to prevent freezing from rapid state updates
   const isDeadRef = useRef(false);
-  const healthRef = useRef(health);
-  healthRef.current = health;
+  const deathHandled = useRef(false);
 
+  // Handle death with delayed callback to prevent render cascade
   useEffect(() => {
-    if (health <= 0 && !isDeadRef.current) {
+    if (health <= 0 && !deathHandled.current) {
+      deathHandled.current = true;
       isDeadRef.current = true;
-      setIsDead(true);
-      // Delay the onHit callback to prevent cascade of updates
-      requestAnimationFrame(() => {
-        onHit();
-      });
+      
+      // Use setTimeout instead of requestAnimationFrame for better decoupling
+      setTimeout(() => {
+        setIsDead(true);
+        // Additional delay before triggering parent update
+        setTimeout(() => {
+          onHit();
+        }, 50);
+      }, 16);
     }
   }, [health, onHit]);
 
-  // Create stable takeDamage function - apply damage immediately but use refs to prevent re-render cascade
+  // Create stable takeDamage function with throttling
+  const lastDamageTime = useRef(0);
   const takeDamage = useCallback((damage: number) => {
     if (isDeadRef.current) return;
     
-    // Apply damage immediately using functional update
-    setHealth((prev) => {
-      const newHealth = Math.max(0, prev - damage);
-      return newHealth;
-    });
+    // Throttle damage to max once per 50ms to prevent rapid re-renders
+    const now = Date.now();
+    if (now - lastDamageTime.current < 50) return;
+    lastDamageTime.current = now;
+    
+    // Apply damage using functional update
+    setHealth((prev) => Math.max(0, prev - damage));
   }, []);
 
-  // Expose hit function for raycasting via userData - attach to group AND all children
+  // Expose hit function for raycasting via userData - only attach to group
   useEffect(() => {
     if (botRef.current) {
       botRef.current.userData.isBot = true;
       botRef.current.userData.takeDamage = takeDamage;
       
-      // Also attach to all children so raycast can find it from any hit mesh
+      // Attach to all children for raycast hit detection
       botRef.current.traverse((child) => {
         child.userData.isBot = true;
         child.userData.takeDamage = takeDamage;
