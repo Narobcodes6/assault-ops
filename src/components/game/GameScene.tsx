@@ -80,16 +80,11 @@ const GameScene = ({ onGameOver }: GameSceneProps) => {
       const intersects = raycaster.intersectObjects(sceneRef.current.children, true);
       
       for (const intersect of intersects) {
-        // Find if we hit a bot
-        let current = intersect.object;
-        while (current.parent) {
-          if (current.userData?.isBot) {
-            current.userData.takeDamage?.(35);
-            break;
-          }
-          current = current.parent;
+        // Check if the hit object or any parent has isBot and takeDamage
+        if (intersect.object.userData?.isBot && intersect.object.userData?.takeDamage) {
+          intersect.object.userData.takeDamage(35);
+          break;
         }
-        break; // Only process first hit
       }
     }
   }, [ammo, raycaster]);
