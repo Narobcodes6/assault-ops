@@ -89,7 +89,13 @@ const GameScene = ({ onGameOver }: GameSceneProps) => {
     }
   }, [ammo, raycaster]);
 
+  // Throttle kill updates to prevent freezing
+  const lastKillTime = useRef(0);
   const handleBotKill = useCallback((botId: number) => {
+    const now = Date.now();
+    if (now - lastKillTime.current < 100) return;
+    lastKillTime.current = now;
+    
     setBots((prev) => prev.map((bot) => 
       bot.id === botId ? { ...bot, alive: false } : bot
     ));
