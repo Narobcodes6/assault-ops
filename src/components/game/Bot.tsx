@@ -10,18 +10,21 @@ interface BotProps {
   playerPosition: THREE.Vector3;
 }
 
-// Camo pattern texture generator
-const createCamoTexture = (): THREE.CanvasTexture => {
+// Cache textures at module level to prevent recreation
+let cachedCamoTexture: THREE.CanvasTexture | null = null;
+let cachedFabricTexture: THREE.CanvasTexture | null = null;
+
+const getCamoTexture = (): THREE.CanvasTexture => {
+  if (cachedCamoTexture) return cachedCamoTexture;
+  
   const canvas = document.createElement('canvas');
   canvas.width = 64;
   canvas.height = 64;
   const ctx = canvas.getContext('2d')!;
   
-  // Base color
   ctx.fillStyle = '#3a4a3a';
   ctx.fillRect(0, 0, 64, 64);
   
-  // Camo blobs
   const colors = ['#2a3a2a', '#4a5a4a', '#3a3a2a', '#2a2a2a'];
   for (let i = 0; i < 20; i++) {
     ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
@@ -38,12 +41,14 @@ const createCamoTexture = (): THREE.CanvasTexture => {
     ctx.fill();
   }
   
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-  return texture;
+  cachedCamoTexture = new THREE.CanvasTexture(canvas);
+  cachedCamoTexture.wrapS = cachedCamoTexture.wrapT = THREE.RepeatWrapping;
+  return cachedCamoTexture;
 };
 
-const createFabricTexture = (): THREE.CanvasTexture => {
+const getFabricTexture = (): THREE.CanvasTexture => {
+  if (cachedFabricTexture) return cachedFabricTexture;
+  
   const canvas = document.createElement('canvas');
   canvas.width = 32;
   canvas.height = 32;
@@ -52,7 +57,6 @@ const createFabricTexture = (): THREE.CanvasTexture => {
   ctx.fillStyle = '#2a2a2a';
   ctx.fillRect(0, 0, 32, 32);
   
-  // Fabric weave pattern
   for (let y = 0; y < 32; y += 2) {
     for (let x = 0; x < 32; x += 2) {
       const shade = 35 + Math.random() * 15;
@@ -61,27 +65,31 @@ const createFabricTexture = (): THREE.CanvasTexture => {
     }
   }
   
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-  return texture;
+  cachedFabricTexture = new THREE.CanvasTexture(canvas);
+  cachedFabricTexture.wrapS = cachedFabricTexture.wrapT = THREE.RepeatWrapping;
+  return cachedFabricTexture;
 };
 
 const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotProps) => {
   const botRef = useRef<THREE.Group>(null);
   const [health, setHealth] = useState(100);
   const [isDead, setIsDead] = useState(false);
-  const [isAiming, setIsAiming] = useState(false);
   const isAimingRef = useRef(false);
+  const [isAiming, setIsAiming] = useState(false);
+  const lastAimingUpdate = useRef(0);
   const targetPosition = useRef(new THREE.Vector3(...position));
   const moveTimer = useRef(0);
   const shootTimer = useRef(0);
   const muzzleFlashRef = useRef<THREE.PointLight>(null);
   const canShoot = useRef(true);
-
-  // Create textures and materials
+  
+  // Reusable vectors to avoid GC
+  const tempVec = useRef(new THREE.Vector3());
+  const tempVec2 = useRef(new THREE.Vector3());
+  // Use cached textures
   const materials = useMemo(() => {
-    const camoTex = createCamoTexture();
-    const fabricTex = createFabricTexture();
+    const camoTex = getCamoTexture();
+    const fabricTex = getFabricTexture();
     
     return {
       camo: new THREE.MeshStandardMaterial({ 
@@ -138,7 +146,7 @@ const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotPr
       deathHandled.current = true;
       isDeadRef.current = true;
       
-      // Use setTimeout instead of requestAnimationFrame for better decoupling
+      // Use setTimeout for better decoupling from render cycle
       setTimeout(() => {
         setIsDead(true);
         // Additional delay before triggering parent update
@@ -220,13 +228,12 @@ const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotPr
     const tooClose = distanceToPlayer < 10;
     const optimalRange = distanceToPlayer > 15 && distanceToPlayer < 30;
 
-    // Look at player when in range - use ref to avoid re-renders
+    // Look at player when in range - use temp vector to avoid GC
     if (inCombatRange) {
-      const lookTarget = playerPosition.clone();
-      lookTarget.y = botPos.y;
-      
-      const direction = lookTarget.sub(botPos).normalize();
-      const targetRotation = Math.atan2(direction.x, direction.z);
+      tempVec.current.copy(playerPosition);
+      tempVec.current.y = botPos.y;
+      tempVec.current.sub(botPos).normalize();
+      const targetRotation = Math.atan2(tempVec.current.x, tempVec.current.z);
       
       // Smooth rotation
       let rotDiff = targetRotation - botRef.current.rotation.y;
@@ -234,14 +241,18 @@ const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotPr
       while (rotDiff < -Math.PI) rotDiff += Math.PI * 2;
       
       botRef.current.rotation.y += rotDiff * delta * 2;
-      // Only update state if it changed - prevents excessive re-renders
-      if (!isAimingRef.current) {
+      // Only update state if it changed and throttle updates
+      const now = Date.now();
+      if (!isAimingRef.current && now - lastAimingUpdate.current > 200) {
         isAimingRef.current = true;
+        lastAimingUpdate.current = now;
         setIsAiming(true);
       }
     } else {
-      if (isAimingRef.current) {
+      const now = Date.now();
+      if (isAimingRef.current && now - lastAimingUpdate.current > 200) {
         isAimingRef.current = false;
+        lastAimingUpdate.current = now;
         setIsAiming(false);
       }
     }
@@ -250,17 +261,17 @@ const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotPr
     moveTimer.current += delta;
     
     if (tooClose) {
-      // Back away from player
-      const awayDir = botPos.clone().sub(playerPosition).normalize();
-      targetPosition.current.copy(botPos).add(awayDir.multiplyScalar(6));
+      // Back away from player - use temp vectors to avoid GC
+      tempVec.current.copy(botPos).sub(playerPosition).normalize();
+      targetPosition.current.copy(botPos).add(tempVec.current.multiplyScalar(6));
     } else if (!optimalRange && inCombatRange) {
       // Move towards optimal range
       if (moveTimer.current > 3) {
         moveTimer.current = 0;
-        const toPlayer = playerPosition.clone().sub(botPos).normalize();
-        const strafeDir = new THREE.Vector3(-toPlayer.z, 0, toPlayer.x);
+        tempVec.current.copy(playerPosition).sub(botPos).normalize();
+        tempVec2.current.set(-tempVec.current.z, 0, tempVec.current.x);
         const strafe = (Math.random() - 0.5) * 10;
-        targetPosition.current.copy(playerPosition).add(toPlayer.multiplyScalar(-20)).add(strafeDir.multiplyScalar(strafe));
+        targetPosition.current.copy(playerPosition).add(tempVec.current.multiplyScalar(-20)).add(tempVec2.current.multiplyScalar(strafe));
       }
     } else if (!inCombatRange) {
       // Patrol when player not in range
@@ -274,13 +285,13 @@ const Bot = ({ position, onHit, onShootPlayer, isActive, playerPosition }: BotPr
       }
     }
 
-    // Smooth movement - slower
-    const moveDir = targetPosition.current.clone().sub(botPos);
+    // Smooth movement - slower - use temp vector
+    tempVec.current.copy(targetPosition.current).sub(botPos);
     const moveSpeed = inCombatRange ? 1.2 : 0.8;
     
-    if (moveDir.length() > 0.5) {
-      moveDir.normalize();
-      botRef.current.position.add(moveDir.multiplyScalar(delta * moveSpeed));
+    if (tempVec.current.length() > 0.5) {
+      tempVec.current.normalize();
+      botRef.current.position.add(tempVec.current.multiplyScalar(delta * moveSpeed));
     }
 
     // Clamp to much larger map bounds
